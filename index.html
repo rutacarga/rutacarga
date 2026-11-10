@@ -638,12 +638,17 @@ function tarjeta(x){
     const mensaje=encodeURIComponent("Hola, vi tu carga en RUTA CARGA: "+x.o+" → "+x.d+". ¿Sigue disponible?");
     contacto='<div class="actions"><a class="btn success" href="https://wa.me/'+escaparHTML(x.whatsapp)+'?text='+mensaje+'" target="_blank" rel="noopener noreferrer" style="text-decoration:none;display:inline-block">Contactar por WhatsApp</a></div>';
   }
+  let interes="";
+  if(x.real&&usuarioActual&&x.company_id!==usuarioActual.id){
+    interes='<div class="actions"><button class="btn secondary interesCargaBtn" type="button" data-load-id="'+escaparHTML(x.id)+'" data-company-id="'+escaparHTML(x.company_id)+'" '+(x.interes?'disabled':'')+'>'+(x.interes?'Interés enviado':'Me interesa esta carga')+'</button></div><p class="small interesMensaje" aria-live="polite"></p>';
+  }
   return '<article class="load">'+
   '<div class="route">'+escaparHTML(x.o)+' <span>→</span> '+escaparHTML(x.d)+'</div>'+
   '<div class="meta"><span class="chip">'+escaparHTML(x.t)+'</span><span class="chip">'+escaparHTML(x.v||"Tractocamión")+'</span><span class="chip">Cargue: '+escaparHTML(x.f||"Por confirmar")+'</span><span class="chip">'+etiqueta+'</span></div>'+
   '<div class="price">'+dinero(x.p)+'</div>'+
   '<p class="small">'+escaparHTML(detalle)+'</p>'+
   contacto+
+  interes+
   '</article>';
 }
 
@@ -873,9 +878,57 @@ async function cargarCargasReales(user){
       contactos=Object.fromEntries((contactosData||[]).map(x=>[x.company_id,normalizarWhatsApp(x.whatsapp)]));
     }
   }
-  cargasReales=cargas.map(x=>({id:x.id,company_id:x.company_id,o:x.origin_city,d:x.destination_city,t:x.cargo_type,v:x.vehicle_type,f:x.loading_date,p:Number(x.payment),description:x.description||"",whatsapp:contactos[x.company_id]||null,real:true}));
+  let misIntereses={};
+  if(user){
+    const {data:interesesData,error:errorIntereses}=await supabaseClient.from("load_interest_requests")
+      .select("load_id,status").eq("transporter_id",user.id);
+    if(errorIntereses){
+      console.error("Error consultando mis intereses:",errorIntereses.message);
+    }else{
+      misIntereses=Object.fromEntries((interesesData||[]).map(x=>[x.load_id,x.status]));
+    }
+  }
+  cargasReales=cargas.map(x=>({id:x.id,company_id:x.company_id,o:x.origin_city,d:x.destination_city,t:x.cargo_type,v:x.vehicle_type,f:x.loading_date,p:Number(x.payment),description:x.description||"",whatsapp:contactos[x.company_id]||null,interes:!!misIntereses[x.id],real:true}));
   pintar();
 }
+
+$("cards").addEventListener("click",async(event)=>{
+  const boton=event.target.closest(".interesCargaBtn");
+  if(!boton)return;
+  const mensaje=boton.closest(".load").querySelector(".interesMensaje");
+  if(!usuarioActual){mensaje.textContent="Inicia sesión para manifestar interés.";return;}
+  const nombre=prompt("¿Cuál es tu nombre completo?");
+  if(nombre===null)return;
+  if(nombre.trim().length<2){mensaje.textContent="Escribe tu nombre completo.";return;}
+  const telefono=prompt("¿Cuál es tu WhatsApp? Incluye indicativo si no es Colombia.");
+  if(telefono===null)return;
+  const numero=normalizarWhatsApp(telefono);
+  if(!numero){mensaje.textContent="Escribe un WhatsApp válido de 10 a 15 dígitos.";return;}
+  const autoriza=confirm("¿Autorizas compartir tu nombre y WhatsApp con la empresa que publicó esta carga para que pueda contactarte?");
+  if(!autoriza){mensaje.textContent="No se envió la solicitud porque no autorizaste compartir tus datos.";return;}
+  boton.disabled=true;
+  mensaje.textContent="Enviando tu interés...";
+  try{
+    const {error}=await supabaseClient.from("load_interest_requests").insert({
+      load_id:boton.dataset.loadId,
+      company_id:boton.dataset.companyId,
+      transporter_id:usuarioActual.id,
+      transporter_name:nombre.trim(),
+      transporter_whatsapp:numero,
+      consent_to_share:true,
+      status:"pending"
+    });
+    if(error){
+      if(error.code==="23505")throw new Error("Ya habías manifestado interés en esta carga.");
+      throw error;
+    }
+    boton.textContent="Interés enviado";
+    mensaje.textContent="Solicitud enviada. La empresa podrá ver tus datos y contactarte.";
+  }catch(error){
+    boton.disabled=false;
+    mensaje.textContent="No se pudo enviar: "+(error.message||"Error desconocido");
+  }
+});
 
 $("guardarCargaReal").onclick=async()=>{
   const boton=$("guardarCargaReal"),mensaje=$("mensajeCargaReal");
