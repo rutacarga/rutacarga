@@ -339,6 +339,7 @@ let solicitudEmpresaExistente=null;
 let rolUsuario=null;
 let esAdministrador=false;
 let empresaVerificada=false;
+let conductorVerificado=false;
 let cargasReales=[];
 
 googleLogin.addEventListener("click",async()=>{
@@ -461,6 +462,7 @@ async function cargarSolicitudConductor(user){
   const boton=$("enviarVerificacionConductor");
   const mensaje=$("mensajeVerificacionConductor");
 
+  conductorVerificado=false;
   estado.textContent="Consultando tu solicitud de verificación...";
   formulario.classList.remove("hidden");
   boton.disabled=false;
@@ -475,14 +477,18 @@ async function cargarSolicitudConductor(user){
 
   if(error){
     estado.textContent="No se pudo consultar tu verificación: "+error.message;
+    pintar();
     return;
   }
 
   if(!data){
+    conductorVerificado=false;
     estado.innerHTML='<span class="status">Sin solicitud</span><p class="small">Todavía no has enviado tus documentos.</p>';
+    pintar();
     return;
   }
 
+  conductorVerificado=data.status==="verified";
   const estados={
     not_submitted:"No enviada",
     pending:"Pendiente de revisión",
@@ -507,6 +513,7 @@ async function cargarSolicitudConductor(user){
   }else if(data.status==="rejected"){
     mensaje.textContent="Puedes corregir los documentos y presentar una nueva solicitud.";
   }
+  pintar();
 }
 
 async function cargarSolicitudesConductoresAdmin(){
@@ -736,6 +743,7 @@ async function mostrarSesion(){
     rolUsuario=null;
     esAdministrador=false;
     empresaVerificada=false;
+    conductorVerificado=false;
     cargasReales=[];
     $("tabAdmin").classList.add("hidden");
     $("tabPublicar").classList.add("hidden");
@@ -1044,8 +1052,12 @@ function tarjeta(x){
     contacto='<div class="actions"><a class="btn success" href="https://wa.me/'+escaparHTML(x.whatsapp)+'?text='+mensaje+'" target="_blank" rel="noopener noreferrer" style="text-decoration:none;display:inline-block">Contactar por WhatsApp</a></div>';
   }
   let interes="";
-  if(x.real&&usuarioActual&&x.company_id!==usuarioActual.id){
-    interes='<div class="actions"><button class="btn secondary interesCargaBtn" type="button" data-load-id="'+escaparHTML(x.id)+'" data-company-id="'+escaparHTML(x.company_id)+'" '+(x.interes?'disabled':'')+'>'+(x.interes?'Interés enviado':'Me interesa esta carga')+'</button></div><p class="small interesMensaje" aria-live="polite"></p>';
+  if(x.real&&usuarioActual&&x.company_id!==usuarioActual.id&&["driver","owner","owner_driver"].includes(rolUsuario)){
+    if(conductorVerificado){
+      interes='<div class="actions"><button class="btn secondary interesCargaBtn" type="button" data-load-id="'+escaparHTML(x.id)+'" data-company-id="'+escaparHTML(x.company_id)+'" '+(x.interes?'disabled':'')+'>'+(x.interes?'Interés enviado':'Me interesa esta carga')+'</button></div><p class="small interesMensaje" aria-live="polite"></p>';
+    }else{
+      interes='<p class="small">Para manifestar interés en cargas reales primero debes verificar tu cuenta de conductor.</p>';
+    }
   }
   return '<article class="load">'+
   '<div class="route">'+escaparHTML(x.o)+' <span>→</span> '+escaparHTML(x.d)+'</div>'+
