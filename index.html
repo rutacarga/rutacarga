@@ -23,6 +23,7 @@ main{max-width:1050px;margin:auto;padding:18px}
 .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:11px}
 label{display:block;font-size:12px;font-weight:bold;color:var(--muted);margin-bottom:5px}
 input,select{width:100%;padding:11px;border:1px solid var(--line);border-radius:8px;background:white;font-size:14px}
+input:focus,select:focus{outline:2px solid #1769aa55;border-color:var(--blue)}
 .actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:13px}
 .btn{border:0;background:var(--blue);color:white;padding:11px 15px;border-radius:8px;font-weight:bold;cursor:pointer}
 .btn.secondary{background:#e8f0f8;color:var(--navy)}
@@ -50,6 +51,7 @@ footer{text-align:center;padding:25px;color:var(--muted);font-size:12px}
 </style>
 </head>
 <body>
+
 <header>
 <div class="header">
 <div class="brand">🚛 RUTA CARGA</div>
@@ -71,8 +73,8 @@ footer{text-align:center;padding:25px;color:var(--muted);font-size:12px}
 <div class="panel">
 <h2>Encuentra tu próxima carga</h2>
 <div class="grid">
-<div><label>Origen</label><select id="origen"><option value="">Todos</option><option>Bogotá</option><option>Medellín</option><option>Cúcuta</option><option>Bucaramanga</option><option>Cali</option><option>Barranquilla</option><option>Cartagena</option><option>Buenaventura</option></select></div>
-<div><label>Destino</label><select id="destino"><option value="">Todos</option><option>Bogotá</option><option>Medellín</option><option>Cúcuta</option><option>Bucaramanga</option><option>Cali</option><option>Barranquilla</option><option>Cartagena</option><option>Buenaventura</option></select></div>
+<div><label>Origen</label><input id="origen" type="text" placeholder="Escribe cualquier vereda, municipio o ciudad"></div>
+<div><label>Destino</label><input id="destino" type="text" placeholder="Escribe cualquier vereda, municipio o ciudad"></div>
 <div><label>Tipo de carga</label><select id="tipo"><option value="">Todas</option><option>General</option><option>Contenedor</option><option>Granel</option><option>Refrigerada</option><option>Estibas</option></select></div>
 <div><label>Fecha de cargue</label><input id="fecha" type="date"></div>
 </div>
@@ -93,8 +95,8 @@ footer{text-align:center;padding:25px;color:var(--muted);font-size:12px}
 <h2>Busca carga para tu regreso</h2>
 <p class="small">Encuentra oportunidades para evitar regresar con el tractocamión vacío.</p>
 <div class="grid">
-<div><label>Estoy en</label><select id="retOrigen"><option>Cúcuta</option><option>Bogotá</option><option>Medellín</option><option>Bucaramanga</option><option>Cali</option><option>Barranquilla</option></select></div>
-<div><label>Quiero regresar a</label><select id="retDestino"><option>Bogotá</option><option>Cúcuta</option><option>Medellín</option><option>Bucaramanga</option><option>Cali</option><option>Barranquilla</option></select></div>
+<div><label>Estoy en</label><input id="retOrigen" type="text" placeholder="Escribe cualquier lugar de Colombia"></div>
+<div><label>Quiero regresar a</label><input id="retDestino" type="text" placeholder="Escribe cualquier lugar de Colombia"></div>
 </div>
 <button class="btn" id="buscarRetorno">Buscar regreso</button>
 </div>
@@ -145,8 +147,8 @@ footer{text-align:center;padding:25px;color:var(--muted);font-size:12px}
 <h2>Publicar oportunidad (demo)</h2>
 <p class="small">Solo las empresas de transporte verificadas podrán publicar cargas reales en la plataforma definitiva.</p>
 <div class="formgrid">
-<div><label>Origen</label><input id="nOrigen" placeholder="Escribe vereda, municipio o ciudad" list="lugaresColombia"></div>
-<div><label>Destino</label><input id="nDestino" placeholder="Escribe vereda, municipio o ciudad" list="lugaresColombia"></div>
+<div><label>Origen</label><input id="nOrigen" type="text" placeholder="Escribe vereda, municipio o ciudad"></div>
+<div><label>Destino</label><input id="nDestino" type="text" placeholder="Escribe vereda, municipio o ciudad"></div>
 <div><label>Tipo</label><select id="nTipo"><option>General</option><option>Contenedor</option><option>Granel</option><option>Refrigerada</option><option>Estibas</option></select></div>
 <div><label>Pago ofrecido</label><input id="nPago" type="number" placeholder="6500000"></div>
 <div><label>Fecha</label><input id="nFecha" type="date"></div>
@@ -168,9 +170,19 @@ const demo=[
 {o:"Cúcuta",d:"Bogotá",t:"General",p:6400000,f:"2026-11-16"},
 {o:"Buenaventura",d:"Medellín",t:"Contenedor",p:5700000,f:"2026-11-17"}
 ];
+
 let personal=[];
 const todas=()=>[...personal,...demo];
 const dinero=n=>new Intl.NumberFormat("es-CO",{style:"currency",currency:"COP",maximumFractionDigits:0}).format(n||0);
+
+// Compara texto sin distinguir mayúsculas ni tildes.
+// Permite escribir nombres parciales de lugares.
+function normalizar(texto){
+return String(texto||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().trim();
+}
+function coincide(lugar,busqueda){
+return !busqueda||normalizar(lugar).includes(normalizar(busqueda));
+}
 
 function tarjeta(x){
 return `<article class="load">
@@ -181,71 +193,94 @@ return `<article class="load">
 <button class="btn secondary" onclick="alert('Esta función estará disponible cuando conectemos la plataforma y verifiquemos las empresas.')">Ver contacto</button>
 </article>`;
 }
+
 function pintar(lista=todas()){
 document.getElementById("cards").innerHTML=lista.length?lista.map(tarjeta).join(""):'<div class="empty">No encontramos oportunidades con esos filtros.</div>';
 document.getElementById("contador").textContent=lista.length+" publicaciones demo";
 }
+
 document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{
 document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active",x===b));
 document.querySelectorAll(".view").forEach(x=>x.classList.toggle("hidden",x.id!==b.dataset.tab));
 });
+
 document.getElementById("filtrar").onclick=()=>{
-let o=document.getElementById("origen").value,d=document.getElementById("destino").value,t=document.getElementById("tipo").value,f=document.getElementById("fecha").value;
-pintar(todas().filter(x=>(!o||x.o===o)&&(!d||x.d===d)&&(!t||x.t===t)&&(!f||x.f===f)));
+let o=document.getElementById("origen").value;
+let d=document.getElementById("destino").value;
+let t=document.getElementById("tipo").value;
+let f=document.getElementById("fecha").value;
+
+pintar(todas().filter(x=>
+coincide(x.o,o)&&
+coincide(x.d,d)&&
+(!t||x.t===t)&&
+(!f||x.f===f)
+));
 };
+
 document.getElementById("limpiar").onclick=()=>{
 ["origen","destino","tipo","fecha"].forEach(id=>document.getElementById(id).value="");
 pintar();
 };
+
 document.getElementById("buscarRetorno").onclick=()=>{
-let o=document.getElementById("retOrigen").value,d=document.getElementById("retDestino").value;
-let encontrados=todas().filter(x=>x.o===o&&x.d===d);
-document.getElementById("retornoCards").innerHTML=encontrados.length?encontrados.map(tarjeta).join(""):'<div class="empty">No hay cargas demo para esta ruta. En la versión real se consultarán las oportunidades publicadas.</div>';
+let o=document.getElementById("retOrigen").value;
+let d=document.getElementById("retDestino").value;
+
+let encontrados=todas().filter(x=>coincide(x.o,o)&&coincide(x.d,d));
+
+document.getElementById("retornoCards").innerHTML=encontrados.length?
+encontrados.map(tarjeta).join(""):
+'<div class="empty">No hay cargas demo para esta ruta. En la versión real se consultarán las oportunidades publicadas.</div>';
 };
+
 document.getElementById("calcular").onclick=()=>{
 let p=Number(document.getElementById("pago").value)||0;
 let c=(Number(document.getElementById("comb").value)||0)+(Number(document.getElementById("peajes").value)||0)+(Number(document.getElementById("otros").value)||0);
 let u=p-c;
+
 document.getElementById("costos").textContent=dinero(c);
 document.getElementById("utilidad").textContent=dinero(u);
 document.getElementById("margen").textContent=p?(u/p*100).toFixed(1).replace(".",",")+"%":"—";
 };
+
 document.getElementById("guardarPerfil").onclick=()=>{
 let p={};
 ["conductor","placa","config","carroceria","ciudad","rol"].forEach(id=>p[id]=document.getElementById(id).value);
 localStorage.setItem("ruta_carga_perfil",JSON.stringify(p));
 document.getElementById("mensajePerfil").textContent="Perfil guardado en este dispositivo.";
 };
+
 try{
 let p=JSON.parse(localStorage.getItem("ruta_carga_perfil")||"null");
 if(p)Object.keys(p).forEach(k=>{let e=document.getElementById(k);if(e)e.value=p[k];});
 }catch(e){}
+
 document.getElementById("abrirModal").onclick=()=>document.getElementById("modal").classList.add("open");
 document.getElementById("cerrarModal").onclick=()=>document.getElementById("modal").classList.remove("open");
+
 document.getElementById("guardarCarga").onclick=()=>{
-let o=document.getElementById("nOrigen").value.trim(),d=document.getElementById("nDestino").value.trim(),p=Number(document.getElementById("nPago").value);
-if(!o||!d||!p){alert("Completa origen, destino y pago ofrecido.");return;}
-personal.unshift({o,d,p,t:document.getElementById("nTipo").value,f:document.getElementById("nFecha").value});
+let o=document.getElementById("nOrigen").value.trim();
+let d=document.getElementById("nDestino").value.trim();
+let p=Number(document.getElementById("nPago").value);
+
+if(!o||!d||!p){
+alert("Completa origen, destino y pago ofrecido.");
+return;
+}
+
+personal.unshift({
+o,d,p,
+t:document.getElementById("nTipo").value,
+f:document.getElementById("nFecha").value
+});
+
 document.getElementById("modal").classList.remove("open");
 pintar();
 alert("Guardado como demostración únicamente en este dispositivo. No se publicó para otros usuarios.");
 };
+
 pintar();
 </script>
-  <datalist id="lugaresColombia">
-  <option value="Bogotá, Cundinamarca">
-  <option value="Medellín, Antioquia">
-  <option value="Cúcuta, Norte de Santander">
-  <option value="Bucaramanga, Santander">
-  <option value="Zipaquirá, Cundinamarca">
-  <option value="Duitama, Boyacá">
-  <option value="Tunja, Boyacá">
-  <option value="Yopal, Casanare">
-  <option value="Villavicencio, Meta">
-  <option value="Cali, Valle del Cauca">
-  <option value="Barranquilla, Atlántico">
-  <option value="Cartagena, Bolívar">
-  <option value="Santa Marta, Magdalena">
-  </datalist>
 </body>
 </html>
