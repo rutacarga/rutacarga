@@ -85,6 +85,7 @@ textarea{min-height:75px;resize:vertical}
 <button class="tab" data-tab="retorno">Carga de regreso</button>
 <button class="tab" data-tab="rentabilidad">Rentabilidad</button>
 <button class="tab" data-tab="perfil">Mi vehículo</button>
+<button class="tab hidden" id="tabVerificacionConductor" data-tab="verificacionConductor">Verificar conductor</button>
 <button class="tab" data-tab="empresa">Empresa transportadora</button>
 <button class="tab hidden" id="tabPublicar" data-tab="publicar">Publicar cargas</button>
 <button class="tab hidden" id="tabAdmin" data-tab="administracion">Administración</button>
@@ -159,6 +160,23 @@ textarea{min-height:75px;resize:vertical}
 </div>
 </section>
 
+<section id="verificacionConductor" class="view hidden">
+<div class="panel">
+<h2>Verificación de conductor</h2>
+<p class="small">Carga un documento de identidad y tu licencia de conducción. Puedes adjuntar un PDF con ambos documentos o una imagen. Los archivos se guardan de forma privada.</p>
+<div id="estadoVerificacionConductor" aria-live="polite" class="small">Consultando tu estado de verificación...</div>
+<div id="formularioVerificacionConductor">
+<div style="margin-top:14px">
+<label for="documentoConductor">Documento del conductor (PDF, JPG o PNG; máximo 10 MB)</label>
+<input id="documentoConductor" type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png">
+</div>
+<div class="notice" style="margin-top:14px">Envía un archivo legible. Si necesitas adjuntar cédula y licencia por separado, reúnelas en un solo PDF para esta primera versión.</div>
+<button class="btn" id="enviarVerificacionConductor" type="button">Enviar documentos para revisión</button>
+<p class="small" id="mensajeVerificacionConductor" aria-live="polite"></p>
+</div>
+</div>
+</section>
+
 <section id="empresa" class="view hidden">
 <div class="panel">
 <h2>Registro de empresa transportadora</h2>
@@ -225,6 +243,22 @@ textarea{min-height:75px;resize:vertical}
 
 <!-- PANEL DE ADMINISTRACIÓN -->
 <section id="administracion" class="view hidden">
+<div class="panel">
+<h2>Verificación de conductores</h2>
+<p class="small">Revisa los documentos de los conductores y aprueba o rechaza las solicitudes. Solo administradores verificados pueden realizar estas acciones.</p>
+<div class="actions">
+<button class="btn" id="recargarConductoresAdmin" type="button">Actualizar conductores</button>
+<select id="filtroConductoresAdmin" style="max-width:220px">
+<option value="pending">Pendientes de revisión</option>
+<option value="verified">Aprobados</option>
+<option value="rejected">Rechazados</option>
+<option value="suspended">Suspendidos</option>
+<option value="all">Todas las solicitudes</option>
+</select>
+</div>
+<p class="small" id="mensajeConductoresAdmin" aria-live="polite">Consultando solicitudes...</p>
+<div id="listaConductoresAdmin" class="cards"></div>
+</div>
 <div class="panel">
 <h2>Administración de empresas</h2>
 <p class="small">Revisa los documentos y decide si las solicitudes cumplen los requisitos de RUTA CARGA.</p>
@@ -302,6 +336,7 @@ const googleLogout=$("googleLogout");
 const estadoAcceso=$("estadoAcceso");
 let usuarioActual=null;
 let solicitudEmpresaExistente=null;
+let rolUsuario=null;
 let esAdministrador=false;
 let empresaVerificada=false;
 let cargasReales=[];
@@ -420,6 +455,224 @@ function escaparHTML(valor){
   })[c]);
 }
 
+async function cargarSolicitudConductor(user){
+  const estado=$("estadoVerificacionConductor");
+  const formulario=$("formularioVerificacionConductor");
+  const boton=$("enviarVerificacionConductor");
+  const mensaje=$("mensajeVerificacionConductor");
+
+  estado.textContent="Consultando tu solicitud de verificación...";
+  formulario.classList.remove("hidden");
+  boton.disabled=false;
+  boton.textContent="Enviar documentos para revisión";
+  mensaje.textContent="";
+
+  const {data,error}=await supabaseClient
+    .from("driver_verifications")
+    .select("document_storage_path,status,submitted_at,review_notes,reviewed_at")
+    .eq("user_id",user.id)
+    .maybeSingle();
+
+  if(error){
+    estado.textContent="No se pudo consultar tu verificación: "+error.message;
+    return;
+  }
+
+  if(!data){
+    estado.innerHTML='<span class="status">Sin solicitud</span><p class="small">Todavía no has enviado tus documentos.</p>';
+    return;
+  }
+
+  const estados={
+    not_submitted:"No enviada",
+    pending:"Pendiente de revisión",
+    verified:"Conductor verificado",
+    rejected:"Solicitud rechazada",
+    suspended:"Verificación suspendida"
+  };
+  const fecha=data.submitted_at?new Date(data.submitted_at).toLocaleString("es-CO"):"No disponible";
+  estado.innerHTML='<span class="status '+escaparHTML(data.status)+'">'+
+    escaparHTML(estados[data.status]||data.status)+'</span>'+
+    '<p class="small">Fecha de envío: '+escaparHTML(fecha)+'</p>'+
+    (data.review_notes?'<p class="small"><b>Observaciones:</b> '+escaparHTML(data.review_notes)+'</p>':"");
+
+  const puedeReenviar=data.status==="rejected"||data.status==="not_submitted";
+  formulario.classList.toggle("hidden",!puedeReenviar);
+  if(data.status==="pending"){
+    mensaje.textContent="Tu solicitud está en revisión. No necesitas enviarla nuevamente.";
+  }else if(data.status==="verified"){
+    mensaje.textContent="Tu cuenta está verificada. Ya puedes manifestar interés en cargas reales.";
+  }else if(data.status==="suspended"){
+    mensaje.textContent="Tu verificación está suspendida. Comunícate con RUTA CARGA.";
+  }else if(data.status==="rejected"){
+    mensaje.textContent="Puedes corregir los documentos y presentar una nueva solicitud.";
+  }
+}
+
+async function cargarSolicitudesConductoresAdmin(){
+  const mensaje=$("mensajeConductoresAdmin");
+  const lista=$("listaConductoresAdmin");
+  if(!usuarioActual||!esAdministrador){
+    mensaje.textContent="No tienes permisos de administrador verificado.";
+    lista.innerHTML="";
+    return;
+  }
+
+  mensaje.textContent="Consultando solicitudes de conductores...";
+  lista.innerHTML="";
+  const filtro=$("filtroConductoresAdmin").value;
+  let consulta=supabaseClient.from("driver_verifications")
+    .select("user_id,document_storage_path,status,submitted_at,review_notes,reviewed_at,reviewed_by")
+    .order("submitted_at",{ascending:false});
+  if(filtro!=="all") consulta=consulta.eq("status",filtro);
+
+  const {data,error}=await consulta;
+  if(error){
+    mensaje.textContent="No se pudieron consultar las solicitudes: "+error.message;
+    return;
+  }
+  if(!data||data.length===0){
+    mensaje.textContent="No hay solicitudes en esta categoría.";
+    lista.innerHTML='<div class="empty">No se encontraron solicitudes.</div>';
+    return;
+  }
+
+  mensaje.textContent="Solicitudes encontradas: "+data.length;
+  const estados={pending:"Pendiente de revisión",verified:"Aprobado",rejected:"Rechazado",suspended:"Suspendido",not_submitted:"No enviada"};
+
+  for(const solicitud of data){
+    const tarjeta=document.createElement("article");
+    tarjeta.className="request";
+    const fecha=solicitud.submitted_at?new Date(solicitud.submitted_at).toLocaleString("es-CO"):"No disponible";
+    tarjeta.innerHTML=
+      '<span class="status '+escaparHTML(solicitud.status)+'">'+escaparHTML(estados[solicitud.status]||solicitud.status)+'</span>'+
+      '<h3>Solicitud de conductor</h3>'+
+      '<p class="small"><b>Usuario:</b> '+escaparHTML(solicitud.user_id)+'</p>'+
+      '<p class="small"><b>Fecha de envío:</b> '+escaparHTML(fecha)+'</p>'+
+      (solicitud.review_notes?'<p class="small"><b>Observaciones:</b> '+escaparHTML(solicitud.review_notes)+'</p>':"")+
+      '<div class="actions"><button class="btn secondary documentoConductorBtn" type="button">Abrir documento privado</button></div>'+
+      (solicitud.status==="pending"?
+        '<div class="actions"><button class="btn success aprobarConductorBtn" type="button">Aprobar conductor</button><button class="btn danger rechazarConductorBtn" type="button">Rechazar solicitud</button></div>':"")+
+      '<p class="small resultadoConductorAdmin" aria-live="polite"></p>';
+    lista.appendChild(tarjeta);
+
+    tarjeta.querySelector(".documentoConductorBtn").addEventListener("click",async()=>{
+      const btn=tarjeta.querySelector(".documentoConductorBtn");
+      const resultado=tarjeta.querySelector(".resultadoConductorAdmin");
+      btn.disabled=true;
+      resultado.textContent="Generando enlace privado temporal...";
+      try{
+        const {data:archivo,error:archivoError}=await supabaseClient.storage
+          .from("driver-documents")
+          .createSignedUrl(solicitud.document_storage_path,300);
+        if(archivoError) throw archivoError;
+        if(!archivo?.signedUrl) throw new Error("No se recibió el enlace del documento.");
+        const ventana=window.open(archivo.signedUrl,"_blank","noopener,noreferrer");
+        resultado.textContent=ventana
+          ?"Documento abierto. El enlace temporal vence en 5 minutos."
+          :"El navegador bloqueó la ventana. Permite ventanas emergentes e inténtalo de nuevo.";
+      }catch(e){
+        resultado.textContent="No se pudo abrir el documento: "+e.message;
+      }finally{
+        btn.disabled=false;
+      }
+    });
+
+    const aprobar=tarjeta.querySelector(".aprobarConductorBtn");
+    if(aprobar) aprobar.addEventListener("click",async()=>{
+      if(!confirm("¿Confirmas que deseas APROBAR este conductor?")) return;
+      const resultado=tarjeta.querySelector(".resultadoConductorAdmin");
+      aprobar.disabled=true;
+      resultado.textContent="Procesando aprobación...";
+      const {error:rpcError}=await supabaseClient.rpc("approve_driver",{p_user_id:solicitud.user_id});
+      if(rpcError){
+        resultado.textContent="No se pudo aprobar: "+rpcError.message;
+        aprobar.disabled=false;
+        return;
+      }
+      resultado.textContent="Conductor aprobado correctamente.";
+      await cargarSolicitudesConductoresAdmin();
+    });
+
+    const rechazar=tarjeta.querySelector(".rechazarConductorBtn");
+    if(rechazar) rechazar.addEventListener("click",async()=>{
+      const motivo=prompt("Escribe el motivo del rechazo (mínimo 5 caracteres):");
+      if(motivo===null) return;
+      if(motivo.trim().length<5){alert("El motivo debe tener al menos 5 caracteres.");return;}
+      if(!confirm("¿Confirmas que deseas RECHAZAR esta solicitud?")) return;
+      const resultado=tarjeta.querySelector(".resultadoConductorAdmin");
+      rechazar.disabled=true;
+      resultado.textContent="Procesando rechazo...";
+      const {error:rpcError}=await supabaseClient.rpc("reject_driver",{
+        p_user_id:solicitud.user_id,
+        p_reason:motivo.trim()
+      });
+      if(rpcError){
+        resultado.textContent="No se pudo rechazar: "+rpcError.message;
+        rechazar.disabled=false;
+        return;
+      }
+      resultado.textContent="Solicitud rechazada correctamente.";
+      await cargarSolicitudesConductoresAdmin();
+    });
+  }
+}
+
+$("recargarConductoresAdmin").addEventListener("click",cargarSolicitudesConductoresAdmin);
+$("filtroConductoresAdmin").addEventListener("change",cargarSolicitudesConductoresAdmin);
+
+$("enviarVerificacionConductor").addEventListener("click",async()=>{
+  const boton=$("enviarVerificacionConductor");
+  const mensaje=$("mensajeVerificacionConductor");
+  const archivo=$("documentoConductor").files[0];
+
+  if(!usuarioActual){mensaje.textContent="Debes iniciar sesión con Google.";return;}
+  if(!["driver","owner","owner_driver"].includes(rolUsuario)){
+    mensaje.textContent="Esta cuenta no tiene un rol habilitado para verificación de conductor.";
+    return;
+  }
+  if(!archivo){mensaje.textContent="Selecciona el documento que vas a enviar.";return;}
+  if(archivo.size>10*1024*1024){mensaje.textContent="El documento supera el límite de 10 MB.";return;}
+  if(!["application/pdf","image/jpeg","image/png"].includes(archivo.type)){
+    mensaje.textContent="Solo se permiten archivos PDF, JPG o PNG.";
+    return;
+  }
+
+  boton.disabled=true;
+  boton.textContent="Enviando...";
+  mensaje.textContent="Cargando documento privado...";
+  let rutaArchivo=null;
+  try{
+    const nombreSeguro=archivo.name.normalize("NFD")
+      .replace(/[\\u0300-\\u036f]/g,"")
+      .replace(/[^a-zA-Z0-9._-]/g,"_");
+    rutaArchivo=usuarioActual.id+"/"+Date.now()+"_"+nombreSeguro;
+
+    const {error:errorSubida}=await supabaseClient.storage.from("driver-documents")
+      .upload(rutaArchivo,archivo,{contentType:archivo.type,upsert:false});
+    if(errorSubida) throw new Error("No se pudo cargar el documento: "+errorSubida.message);
+
+    mensaje.textContent="Documento cargado. Registrando solicitud...";
+    const {error:errorRegistro}=await supabaseClient.rpc("submit_driver_verification",{
+      p_document_storage_path:rutaArchivo
+    });
+    if(errorRegistro){
+      await supabaseClient.storage.from("driver-documents").remove([rutaArchivo]);
+      rutaArchivo=null;
+      throw new Error("No se pudo registrar la solicitud: "+errorRegistro.message);
+    }
+
+    $("documentoConductor").value="";
+    mensaje.textContent="¡Solicitud enviada! Tus documentos quedaron pendientes de revisión.";
+    await cargarSolicitudConductor(usuarioActual);
+  }catch(error){
+    mensaje.textContent=error.message||"Ocurrió un error al enviar la solicitud.";
+  }finally{
+    boton.disabled=false;
+    boton.textContent="Enviar documentos para revisión";
+  }
+});
+
 async function comprobarAdministrador(user){
   const {data,error}=await supabaseClient
     .from("profiles")
@@ -428,15 +681,21 @@ async function comprobarAdministrador(user){
     .maybeSingle();
 
   if(error){
+    rolUsuario=null;
     esAdministrador=false;
+    empresaVerificada=false;
     $("tabAdmin").classList.add("hidden");
+    $("tabVerificacionConductor").classList.add("hidden");
     return;
   }
 
-  esAdministrador=!!data&&data.role==="admin";
+  rolUsuario=data?.role||null;
+  esAdministrador=!!data&&data.role==="admin"&&data.verification_status==="verified";
   empresaVerificada=!!data&&data.verification_status==="verified"&&(data.role==="company"||data.role==="admin");
+  const puedeVerificarConductor=["driver","owner","owner_driver"].includes(rolUsuario);
   $("tabAdmin").classList.toggle("hidden",!esAdministrador);
   $("tabPublicar").classList.toggle("hidden",!empresaVerificada);
+  $("tabVerificacionConductor").classList.toggle("hidden",!puedeVerificarConductor);
 
   if(esAdministrador){
     $("mensajeAdmin").textContent="Sesión de administrador reconocida.";
@@ -464,15 +723,23 @@ async function mostrarSesion(){
     await cargarPerfilDesdeSupabase(data.user);
     await cargarEmpresaDesdeSupabase(data.user);
     await cargarContactoEmpresa(data.user);
+    if(["driver","owner","owner_driver"].includes(rolUsuario)){
+      await cargarSolicitudConductor(data.user);
+    }
 
-    if(esAdministrador) await cargarSolicitudesAdmin();
+    if(esAdministrador){
+      await cargarSolicitudesAdmin();
+      await cargarSolicitudesConductoresAdmin();
+    }
   }else{
     usuarioActual=null;
+    rolUsuario=null;
     esAdministrador=false;
     empresaVerificada=false;
     cargasReales=[];
     $("tabAdmin").classList.add("hidden");
     $("tabPublicar").classList.add("hidden");
+    $("tabVerificacionConductor").classList.add("hidden");
     estadoAcceso.textContent="Inicia sesión con Google para acceder a RUTA CARGA.";
     googleLogin.classList.remove("hidden");
     googleLogin.disabled=false;
@@ -800,8 +1067,9 @@ document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{
   if(b.dataset.tab==="administracion"&&!esAdministrador) return;
   document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active",x===b));
   document.querySelectorAll(".view").forEach(x=>x.classList.toggle("hidden",x.id!==b.dataset.tab));
-  if(b.dataset.tab==="administracion"){cargarSolicitudesAdmin();cargarEmpresasAdmin();cargarCargasAdmin();cargarHistorialAdmin();}
+  if(b.dataset.tab==="administracion"){cargarSolicitudesAdmin();cargarSolicitudesConductoresAdmin();cargarEmpresasAdmin();cargarCargasAdmin();cargarHistorialAdmin();}
   if(b.dataset.tab==="empresa") cargarInteresadosEmpresa();
+  if(b.dataset.tab==="verificacionConductor"&&usuarioActual) cargarSolicitudConductor(usuarioActual);
 });
 
 $("filtrar").onclick=()=>{
