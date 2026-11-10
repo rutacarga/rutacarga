@@ -78,7 +78,7 @@ textarea{min-height:75px;resize:vertical}
 </section>
 
 <div id="contenidoApp" class="hidden">
-<div class="notice"><b>Versión de demostración:</b> las cargas mostradas son ficticias. Las solicitudes de empresas se almacenan para revisión, pero todavía no se publican cargas reales.</div>
+<div class="notice"><b>Información:</b> las cargas marcadas como demostración son ficticias. Las cargas reales serán publicadas por empresas transportadoras verificadas.</div>
 
 <div class="tabs">
 <button class="tab active" data-tab="buscar">Buscar cargas</button>
@@ -86,6 +86,7 @@ textarea{min-height:75px;resize:vertical}
 <button class="tab" data-tab="rentabilidad">Rentabilidad</button>
 <button class="tab" data-tab="perfil">Mi vehículo</button>
 <button class="tab" data-tab="empresa">Empresa transportadora</button>
+<button class="tab hidden" id="tabPublicar" data-tab="publicar">Publicar cargas</button>
 <button class="tab hidden" id="tabAdmin" data-tab="administracion">Administración</button>
 </div>
 
@@ -177,6 +178,24 @@ textarea{min-height:75px;resize:vertical}
 </div>
 </section>
 
+<section id="publicar" class="view hidden">
+<div class="panel">
+<h2>Publicar una carga real</h2>
+<p class="small">Disponible únicamente para empresas transportadoras verificadas.</p>
+<div class="grid">
+<div><label>Origen *</label><input id="cargaOrigen" maxlength="100" placeholder="Ciudad de origen"></div>
+<div><label>Destino *</label><input id="cargaDestino" maxlength="100" placeholder="Ciudad de destino"></div>
+<div><label>Tipo de carga *</label><select id="cargaTipo"><option>General</option><option>Contenedor</option><option>Granel</option><option>Refrigerada</option><option>Estibas</option></select></div>
+<div><label>Vehículo requerido</label><select id="cargaVehiculo"><option>Tractocamión</option><option>Turbo</option><option>Sencillo</option><option>Patineta</option><option>Camión rígido</option></select></div>
+<div><label>Fecha de cargue *</label><input id="cargaFecha" type="date"></div>
+<div><label>Pago ofrecido (COP) *</label><input id="cargaPago" type="number" min="1" step="1000"></div>
+<div style="grid-column:1/-1"><label>Detalles adicionales</label><textarea id="cargaDescripcion" maxlength="1000"></textarea></div>
+</div>
+<button class="btn success" id="guardarCargaReal" type="button">Publicar carga</button>
+<p class="small" id="mensajeCargaReal" aria-live="polite"></p>
+</div>
+</section>
+
 <!-- PANEL DE ADMINISTRACIÓN -->
 <section id="administracion" class="view hidden">
 <div class="panel">
@@ -235,6 +254,8 @@ const estadoAcceso=$("estadoAcceso");
 let usuarioActual=null;
 let solicitudEmpresaExistente=null;
 let esAdministrador=false;
+let empresaVerificada=false;
+let cargasReales=[];
 
 googleLogin.addEventListener("click",async()=>{
   estadoAcceso.textContent="Abriendo Google...";
@@ -353,7 +374,7 @@ function escaparHTML(valor){
 async function comprobarAdministrador(user){
   const {data,error}=await supabaseClient
     .from("profiles")
-    .select("role")
+    .select("role,verification_status")
     .eq("id",user.id)
     .maybeSingle();
 
@@ -364,7 +385,9 @@ async function comprobarAdministrador(user){
   }
 
   esAdministrador=!!data&&data.role==="admin";
+  empresaVerificada=!!data&&data.verification_status==="verified"&&(data.role==="company"||data.role==="admin");
   $("tabAdmin").classList.toggle("hidden",!esAdministrador);
+  $("tabPublicar").classList.toggle("hidden",!empresaVerificada);
 
   if(esAdministrador){
     $("mensajeAdmin").textContent="Sesión de administrador reconocida.";
@@ -388,6 +411,7 @@ async function mostrarSesion(){
     contenidoApp.classList.remove("hidden");
 
     await comprobarAdministrador(data.user);
+    await cargarCargasReales(data.user);
     await cargarPerfilDesdeSupabase(data.user);
     await cargarEmpresaDesdeSupabase(data.user);
 
@@ -395,7 +419,10 @@ async function mostrarSesion(){
   }else{
     usuarioActual=null;
     esAdministrador=false;
+    empresaVerificada=false;
+    cargasReales=[];
     $("tabAdmin").classList.add("hidden");
+    $("tabPublicar").classList.add("hidden");
     estadoAcceso.textContent="Inicia sesión con Google para acceder a RUTA CARGA.";
     googleLogin.classList.remove("hidden");
     googleLogin.disabled=false;
@@ -582,7 +609,7 @@ const demo=[
 ];
 
 let personal=[];
-const todas=()=>[...personal,...demo];
+const todas=()=>[...cargasReales,...personal,...demo];
 const dinero=n=>new Intl.NumberFormat("es-CO",{style:"currency",currency:"COP",maximumFractionDigits:0}).format(n||0);
 
 function normalizar(texto){
@@ -593,18 +620,20 @@ function coincide(lugar,busqueda){
 }
 
 function tarjeta(x){
-  return `<article class="load">
-  <div class="route">${escaparHTML(x.o)} <span>→</span> ${escaparHTML(x.d)}</div>
-  <div class="meta"><span class="chip">${escaparHTML(x.t)}</span><span class="chip">Tractocamión</span><span class="chip">Cargue: ${escaparHTML(x.f||"Por confirmar")}</span></div>
-  <div class="price">${dinero(x.p)}</div>
-  <p class="small">Publicación ficticia de demostración. Contacto no disponible.</p>
-  <button class="btn secondary" onclick="alert('Esta función estará disponible cuando conectemos la plataforma y verifiquemos las empresas.')">Ver contacto</button>
-  </article>`;
+  const etiqueta=x.real?"CARGA REAL":"DEMO";
+  const detalle=x.real?(x.description||"Publicación de empresa transportadora verificada."):"Publicación ficticia de demostración. Contacto no disponible.";
+  return '<article class="load">'+
+  '<div class="route">'+escaparHTML(x.o)+' <span>→</span> '+escaparHTML(x.d)+'</div>'+
+  '<div class="meta"><span class="chip">'+escaparHTML(x.t)+'</span><span class="chip">'+escaparHTML(x.v||"Tractocamión")+'</span><span class="chip">Cargue: '+escaparHTML(x.f||"Por confirmar")+'</span><span class="chip">'+etiqueta+'</span></div>'+
+  '<div class="price">'+dinero(x.p)+'</div>'+
+  '<p class="small">'+escaparHTML(detalle)+'</p>'+
+  '</article>';
 }
 
 function pintar(lista=todas()){
   $("cards").innerHTML=lista.length?lista.map(tarjeta).join(""):'<div class="empty">No encontramos oportunidades con esos filtros.</div>';
-  $("contador").textContent=lista.length+" publicaciones demo";
+  const reales=lista.filter(x=>x.real).length;
+  $("contador").textContent=reales+" reales · "+(lista.length-reales)+" demo";
 }
 
 document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{
@@ -753,6 +782,34 @@ $("enviarEmpresa").onclick=async()=>{
     boton.disabled=!!solicitudEmpresaExistente;
     if(!solicitudEmpresaExistente) boton.textContent="Enviar solicitud de verificación";
   }
+};
+
+async function cargarCargasReales(user){
+  const {data,error}=await supabaseClient.from("company_loads")
+    .select("id,company_id,origin_city,destination_city,cargo_type,vehicle_type,loading_date,payment,description,status,created_at")
+    .eq("status","published").order("created_at",{ascending:false});
+  if(error){console.error("Error consultando cargas reales:",error.message);return;}
+  cargasReales=(data||[]).map(x=>({id:x.id,company_id:x.company_id,o:x.origin_city,d:x.destination_city,t:x.cargo_type,v:x.vehicle_type,f:x.loading_date,p:Number(x.payment),description:x.description||"",real:true}));
+  pintar();
+}
+
+$("guardarCargaReal").onclick=async()=>{
+  const boton=$("guardarCargaReal"),mensaje=$("mensajeCargaReal");
+  if(!usuarioActual||!empresaVerificada){mensaje.textContent="Solo las empresas verificadas pueden publicar cargas.";return;}
+  const o=$("cargaOrigen").value.trim(),d=$("cargaDestino").value.trim(),f=$("cargaFecha").value,p=Number($("cargaPago").value);
+  const t=$("cargaTipo").value,v=$("cargaVehiculo").value,description=$("cargaDescripcion").value.trim();
+  if(!o||!d||!f||!p||p<=0){mensaje.textContent="Completa origen, destino, fecha y pago válido.";return;}
+  boton.disabled=true;boton.textContent="Publicando...";mensaje.textContent="Guardando la carga...";
+  try{
+    const {data,error}=await supabaseClient.from("company_loads").insert({company_id:usuarioActual.id,origin_city:o,destination_city:d,cargo_type:t,vehicle_type:v,loading_date:f,payment:p,description:description||null,status:"published"})
+      .select("id,company_id,origin_city,destination_city,cargo_type,vehicle_type,loading_date,payment,description,status,created_at").single();
+    if(error)throw error;
+    cargasReales.unshift({id:data.id,company_id:data.company_id,o:data.origin_city,d:data.destination_city,t:data.cargo_type,v:data.vehicle_type,f:data.loading_date,p:Number(data.payment),description:data.description||"",real:true});
+    ["cargaOrigen","cargaDestino","cargaFecha","cargaPago","cargaDescripcion"].forEach(id=>$(id).value="");
+    mensaje.textContent="¡Carga publicada correctamente! Ya aparece en las oportunidades disponibles.";
+    pintar();
+  }catch(e){mensaje.textContent="No se pudo publicar: "+(e.message||"Error desconocido");}
+  finally{boton.disabled=false;boton.textContent="Publicar carga";}
 };
 
 $("abrirModal").onclick=()=>$("modal").classList.add("open");
