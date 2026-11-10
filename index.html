@@ -186,6 +186,13 @@ textarea{min-height:75px;resize:vertical}
 <button class="btn" id="guardarContactoEmpresa" type="button">Guardar contacto</button>
 <p class="small" id="mensajeContactoEmpresa" aria-live="polite"></p>
 </div>
+<div class="panel" id="panelInteresadosEmpresa">
+<h2>Transportadores interesados en mis cargas</h2>
+<p class="small">Consulta los transportadores que autorizaron compartir sus datos contigo. Solo verás solicitudes de tus propias cargas.</p>
+<div class="actions"><button class="btn secondary" id="actualizarInteresados" type="button">Actualizar interesados</button></div>
+<p class="small" id="mensajeInteresados" aria-live="polite">Pulsa actualizar para consultar las solicitudes.</p>
+<div id="listaInteresados" class="cards"></div>
+</div>
 </section>
 
 <section id="publicar" class="view hidden">
@@ -663,6 +670,7 @@ document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{
   document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active",x===b));
   document.querySelectorAll(".view").forEach(x=>x.classList.toggle("hidden",x.id!==b.dataset.tab));
   if(b.dataset.tab==="administracion") cargarSolicitudesAdmin();
+  if(b.dataset.tab==="empresa") cargarInteresadosEmpresa();
 });
 
 $("filtrar").onclick=()=>{
@@ -812,6 +820,48 @@ function normalizarWhatsApp(valor){
   if(numero.length<10||numero.length>15) return null;
   return numero;
 }
+
+async function cargarInteresadosEmpresa(){
+  const mensaje=$("mensajeInteresados"),lista=$("listaInteresados");
+  if(!usuarioActual){mensaje.textContent="Inicia sesión para consultar los interesados.";lista.innerHTML="";return;}
+  mensaje.textContent="Consultando transportadores interesados...";
+  lista.innerHTML="";
+  const {data,error}=await supabaseClient.from("load_interest_requests")
+    .select("id,load_id,transporter_name,transporter_whatsapp,status,created_at")
+    .eq("company_id",usuarioActual.id)
+    .order("created_at",{ascending:false});
+  if(error){mensaje.textContent="No se pudieron consultar los interesados: "+error.message;return;}
+  if(!data||data.length===0){mensaje.textContent="Todavía no hay transportadores interesados en tus cargas.";return;}
+  mensaje.textContent="Solicitudes recibidas: "+data.length;
+  for(const solicitud of data){
+    const carga=cargasReales.find(x=>x.id===solicitud.load_id);
+    const origen=carga?carga.o:"Carga publicada";
+    const destino=carga?carga.d:"";
+    const fecha=new Date(solicitud.created_at).toLocaleString("es-CO");
+    const numero=normalizarWhatsApp(solicitud.transporter_whatsapp)||"";
+    const mensajeWA=encodeURIComponent("Hola "+solicitud.transporter_name+", recibimos tu interés en nuestra carga "+origen+" → "+destino+". Te contactamos desde RUTA CARGA.");
+    const tarjeta=document.createElement("article");
+    tarjeta.className="load";
+    tarjeta.innerHTML='<div class="route">'+escaparHTML(origen)+' → '+escaparHTML(destino)+'</div>'+
+      '<h3>'+escaparHTML(solicitud.transporter_name)+'</h3>'+
+      '<p class="small"><b>WhatsApp:</b> '+escaparHTML(solicitud.transporter_whatsapp)+'</p>'+
+      '<p class="small"><b>Solicitud:</b> '+escaparHTML(fecha)+'</p>'+
+      '<p class="small"><b>Estado:</b> '+escaparHTML(solicitud.status==="pending"?"Pendiente":solicitud.status==="contacted"?"Contactado":"Cerrado")+'</p>'+
+      '<div class="actions"><a class="btn success" href="https://wa.me/'+escaparHTML(numero)+'?text='+mensajeWA+'" target="_blank" rel="noopener noreferrer" style="text-decoration:none;display:inline-block">Contactar transportador</a>'+
+      '<button class="btn secondary marcarContactado" type="button" '+(solicitud.status==="contacted"?"disabled":"")+' data-id="'+escaparHTML(solicitud.id)+'">Marcar contactado</button>'+
+      '<button class="btn danger marcarCerrado" type="button" '+(solicitud.status==="closed"?"disabled":"")+' data-id="'+escaparHTML(solicitud.id)+'">Cerrar solicitud</button></div>';
+    lista.appendChild(tarjeta);
+  }
+  lista.querySelectorAll(".marcarContactado,.marcarCerrado").forEach(b=>b.addEventListener("click",async()=>{
+    const nuevoEstado=b.classList.contains("marcarContactado")?"contacted":"closed";
+    b.disabled=true;
+    const {error}=await supabaseClient.from("load_interest_requests").update({status:nuevoEstado}).eq("id",b.dataset.id);
+    if(error){mensaje.textContent="No se pudo actualizar el estado: "+error.message;b.disabled=false;return;}
+    await cargarInteresadosEmpresa();
+  }));
+}
+
+$("actualizarInteresados").onclick=cargarInteresadosEmpresa;
 
 async function cargarContactoEmpresa(user){
   const mensaje=$("mensajeContactoEmpresa");
