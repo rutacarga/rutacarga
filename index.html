@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#102a43">
 <title>RUTA CARGA | La red nacional del hombre camión</title>
 <style>
-:root{--navy:#102a43;--blue:#1769aa;--bg:#f3f6fa;--ink:#172b4d;--muted:#61758a;--line:#dce5ee;--green:#13845b}
+:root{--navy:#102a43;--blue:#1769aa;--bg:#f3f6fa;--ink:#172b4d;--muted:#61758a;--line:#dce5ee;--green:#13845b;--red:#b42318}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);font:15px Arial,sans-serif;color:var(--ink)}
 header{background:linear-gradient(120deg,#102a43,#1769aa);color:white;padding:25px 18px}
@@ -27,10 +27,12 @@ input:focus,select:focus,textarea:focus{outline:2px solid #1769aa55;border-color
 .actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:13px}
 .btn{border:0;background:var(--blue);color:white;padding:11px 15px;border-radius:8px;font-weight:bold;cursor:pointer}
 .btn.secondary{background:#e8f0f8;color:var(--navy)}
+.btn.success{background:var(--green)}
+.btn.danger{background:var(--red)}
 .btn:disabled{opacity:.6;cursor:not-allowed}
 h2{font-size:20px}
 .cards{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
-.load{background:white;border:1px solid var(--line);border-radius:12px;padding:15px}
+.load,.request{background:white;border:1px solid var(--line);border-radius:12px;padding:15px}
 .route{font-size:18px;font-weight:800}
 .route span{color:var(--blue)}
 .meta{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0}
@@ -48,6 +50,11 @@ footer{text-align:center;padding:25px;color:var(--muted);font-size:12px}
 .modalbox{background:white;border-radius:14px;padding:18px;width:min(550px,100%);max-height:90vh;overflow:auto}
 .formgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .status{display:inline-block;padding:7px 11px;border-radius:20px;background:#fff2cc;color:#775400;font-size:12px;font-weight:bold}
+.status.verified{background:#d9f5e8;color:#12633f}
+.status.rejected,.status.suspended{background:#fee4e2;color:#a21b14}
+.request h3{margin:8px 0}
+.request p{overflow-wrap:anywhere}
+textarea{min-height:75px;resize:vertical}
 @media(max-width:700px){.grid{grid-template-columns:1fr 1fr}.cards{grid-template-columns:1fr}}
 @media(max-width:430px){.grid,.formgrid{grid-template-columns:1fr}.stats{grid-template-columns:1fr}}
 </style>
@@ -79,14 +86,15 @@ footer{text-align:center;padding:25px;color:var(--muted);font-size:12px}
 <button class="tab" data-tab="rentabilidad">Rentabilidad</button>
 <button class="tab" data-tab="perfil">Mi vehículo</button>
 <button class="tab" data-tab="empresa">Empresa transportadora</button>
+<button class="tab hidden" id="tabAdmin" data-tab="administracion">Administración</button>
 </div>
 
 <section id="buscar" class="view">
 <div class="panel">
 <h2>Encuentra tu próxima carga</h2>
 <div class="grid">
-<div><label>Origen</label><input id="origen" type="text" placeholder="Escribe cualquier vereda, municipio o ciudad"></div>
-<div><label>Destino</label><input id="destino" type="text" placeholder="Escribe cualquier vereda, municipio o ciudad"></div>
+<div><label>Origen</label><input id="origen" placeholder="Escribe cualquier vereda, municipio o ciudad"></div>
+<div><label>Destino</label><input id="destino" placeholder="Escribe cualquier vereda, municipio o ciudad"></div>
 <div><label>Tipo de carga</label><select id="tipo"><option value="">Todas</option><option>General</option><option>Contenedor</option><option>Granel</option><option>Refrigerada</option><option>Estibas</option></select></div>
 <div><label>Fecha de cargue</label><input id="fecha" type="date"></div>
 </div>
@@ -107,8 +115,8 @@ footer{text-align:center;padding:25px;color:var(--muted);font-size:12px}
 <h2>Busca carga para tu regreso</h2>
 <p class="small">Encuentra oportunidades para evitar regresar con el tractocamión vacío.</p>
 <div class="grid">
-<div><label>Estoy en</label><input id="retOrigen" type="text" placeholder="Escribe cualquier lugar de Colombia"></div>
-<div><label>Quiero regresar a</label><input id="retDestino" type="text" placeholder="Escribe cualquier lugar de Colombia"></div>
+<div><label>Estoy en</label><input id="retOrigen" placeholder="Escribe cualquier lugar de Colombia"></div>
+<div><label>Quiero regresar a</label><input id="retDestino" placeholder="Escribe cualquier lugar de Colombia"></div>
 </div>
 <button class="btn" id="buscarRetorno">Buscar regreso</button>
 </div>
@@ -118,7 +126,6 @@ footer{text-align:center;padding:25px;color:var(--muted);font-size:12px}
 <section id="rentabilidad" class="view hidden">
 <div class="panel">
 <h2>Calcula la rentabilidad de tu viaje</h2>
-<p class="small">Ingresa los gastos estimados para conocer el resultado del recorrido.</p>
 <div class="grid">
 <div><label>Pago del viaje (COP)</label><input id="pago" type="number" value="8500000"></div>
 <div><label>Combustible (COP)</label><input id="comb" type="number" value="2600000"></div>
@@ -155,36 +162,41 @@ footer{text-align:center;padding:25px;color:var(--muted);font-size:12px}
 <div class="panel">
 <h2>Registro de empresa transportadora</h2>
 <p class="small">Completa los datos de tu empresa y adjunta un documento de soporte para solicitar la verificación de RUTA CARGA.</p>
-
 <div id="estadoEmpresa" class="small" aria-live="polite">Consultando solicitudes anteriores...</div>
-
 <div id="formularioEmpresa">
 <div class="formgrid">
-<div>
-<label for="razonSocial">Razón social *</label>
-<input id="razonSocial" type="text" maxlength="180" placeholder="Nombre legal de la empresa">
+<div><label for="razonSocial">Razón social *</label><input id="razonSocial" maxlength="180" placeholder="Nombre legal de la empresa"></div>
+<div><label for="nitEmpresa">NIT *</label><input id="nitEmpresa" maxlength="30" placeholder="NIT de la empresa"></div>
+<div style="grid-column:1/-1"><label for="referenciaAutorizacion">Referencia de autorización o habilitación</label><input id="referenciaAutorizacion" maxlength="180" placeholder="Número o referencia, si aplica"></div>
+<div style="grid-column:1/-1"><label for="documentoEmpresa">Documento de soporte * (PDF, JPG o PNG; máximo 10 MB)</label><input id="documentoEmpresa" type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"></div>
 </div>
-<div>
-<label for="nitEmpresa">NIT *</label>
-<input id="nitEmpresa" type="text" maxlength="30" placeholder="NIT de la empresa">
-</div>
-<div style="grid-column:1/-1">
-<label for="referenciaAutorizacion">Referencia de autorización o habilitación</label>
-<input id="referenciaAutorizacion" type="text" maxlength="180" placeholder="Número o referencia, si aplica">
-</div>
-<div style="grid-column:1/-1">
-<label for="documentoEmpresa">Documento de soporte * (PDF, JPG o PNG; máximo 10 MB)</label>
-<input id="documentoEmpresa" type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png">
-</div>
-</div>
-<div class="notice" style="margin-top:14px">
-La documentación será privada. Enviar la solicitud no significa que la empresa esté aprobada. La verificación debe realizarla RUTA CARGA.
-</div>
+<div class="notice" style="margin-top:14px">La documentación será privada. Enviar la solicitud no significa que la empresa esté aprobada. La verificación debe realizarla RUTA CARGA.</div>
 <button class="btn" id="enviarEmpresa" type="button">Enviar solicitud de verificación</button>
 <p class="small" id="mensajeEmpresa" aria-live="polite"></p>
 </div>
 </div>
 </section>
+
+<!-- PANEL DE ADMINISTRACIÓN -->
+<section id="administracion" class="view hidden">
+<div class="panel">
+<h2>Administración de empresas</h2>
+<p class="small">Revisa los documentos y decide si las solicitudes cumplen los requisitos de RUTA CARGA.</p>
+<div class="actions">
+<button class="btn" id="recargarAdmin" type="button">Actualizar solicitudes</button>
+<select id="filtroAdmin" style="max-width:220px">
+<option value="pending">Pendientes de revisión</option>
+<option value="verified">Aprobadas</option>
+<option value="rejected">Rechazadas</option>
+<option value="suspended">Suspendidas</option>
+<option value="all">Todas las solicitudes</option>
+</select>
+</div>
+<p class="small" id="mensajeAdmin" aria-live="polite">Consultando solicitudes...</p>
+<div id="listaAdmin" class="cards"></div>
+</div>
+</section>
+
 </div>
 </main>
 
@@ -195,8 +207,8 @@ La documentación será privada. Enviar la solicitud no significa que la empresa
 <h2>Publicar oportunidad (demo)</h2>
 <p class="small">Solo las empresas de transporte verificadas podrán publicar cargas reales en la plataforma definitiva.</p>
 <div class="formgrid">
-<div><label>Origen</label><input id="nOrigen" type="text" placeholder="Escribe vereda, municipio o ciudad"></div>
-<div><label>Destino</label><input id="nDestino" type="text" placeholder="Escribe vereda, municipio o ciudad"></div>
+<div><label>Origen</label><input id="nOrigen" placeholder="Escribe vereda, municipio o ciudad"></div>
+<div><label>Destino</label><input id="nDestino" placeholder="Escribe vereda, municipio o ciudad"></div>
 <div><label>Tipo</label><select id="nTipo"><option>General</option><option>Contenedor</option><option>Granel</option><option>Refrigerada</option><option>Estibas</option></select></div>
 <div><label>Pago ofrecido</label><input id="nPago" type="number" placeholder="6500000"></div>
 <div><label>Fecha</label><input id="nFecha" type="date"></div>
@@ -211,161 +223,355 @@ La documentación será privada. Enviar la solicitud no significa que la empresa
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const SUPABASE_URL = "https://hnnjdtisekgacydcsvzd.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_bVkpz6cXQ3d9BxyMCnwHEA_pYOHjiyu";
-const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const SUPABASE_URL="https://hnnjdtisekgacydcsvzd.supabase.co";
+const SUPABASE_ANON_KEY="sb_publishable_bVkpz6cXQ3d9BxyMCnwHEA_pYOHjiyu";
+const supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
 
-const contenidoApp = document.getElementById("contenidoApp");
-const googleLogin = document.getElementById("googleLogin");
-const googleLogout = document.getElementById("googleLogout");
-const estadoAcceso = document.getElementById("estadoAcceso");
-let usuarioActual = null;
-let solicitudEmpresaExistente = null;
+const $=id=>document.getElementById(id);
+const contenidoApp=$("contenidoApp");
+const googleLogin=$("googleLogin");
+const googleLogout=$("googleLogout");
+const estadoAcceso=$("estadoAcceso");
+let usuarioActual=null;
+let solicitudEmpresaExistente=null;
+let esAdministrador=false;
 
-googleLogin.addEventListener("click", async () => {
-  estadoAcceso.textContent = "Abriendo Google...";
-  googleLogin.disabled = true;
-
-  const { error } = await supabaseClient.auth.signInWithOAuth({
-    provider: "google",
-    options: { redirectTo: "https://rutacarga.com.co" }
+googleLogin.addEventListener("click",async()=>{
+  estadoAcceso.textContent="Abriendo Google...";
+  googleLogin.disabled=true;
+  const {error}=await supabaseClient.auth.signInWithOAuth({
+    provider:"google",
+    options:{redirectTo:"https://rutacarga.com.co"}
   });
-
-  if (error) {
-    estadoAcceso.textContent = "No se pudo iniciar sesión: " + error.message;
-    googleLogin.disabled = false;
+  if(error){
+    estadoAcceso.textContent="No se pudo iniciar sesión: "+error.message;
+    googleLogin.disabled=false;
   }
 });
 
-googleLogout.addEventListener("click", async () => {
-  const { error } = await supabaseClient.auth.signOut();
-  if (error) estadoAcceso.textContent = "No se pudo cerrar sesión: " + error.message;
+googleLogout.addEventListener("click",async()=>{
+  const {error}=await supabaseClient.auth.signOut();
+  if(error) estadoAcceso.textContent="No se pudo cerrar sesión: "+error.message;
 });
 
-async function cargarPerfilDesdeSupabase(user) {
-  const mensaje = document.getElementById("mensajePerfil");
-  mensaje.textContent = "Consultando tus datos guardados...";
+async function cargarPerfilDesdeSupabase(user){
+  const mensaje=$("mensajePerfil");
+  mensaje.textContent="Consultando tus datos guardados...";
 
-  const { data: perfil, error: errorPerfil } = await supabaseClient
-    .from("profiles")
-    .select("full_name, city")
-    .eq("id", user.id)
-    .maybeSingle();
+  const {data:perfil,error:errorPerfil}=await supabaseClient
+    .from("profiles").select("full_name,city").eq("id",user.id).maybeSingle();
 
-  if (errorPerfil) {
-    mensaje.textContent = "No se pudo consultar tu perfil: " + errorPerfil.message;
+  if(errorPerfil){
+    mensaje.textContent="No se pudo consultar tu perfil: "+errorPerfil.message;
     return;
   }
 
-  if (perfil) {
-    document.getElementById("conductor").value = perfil.full_name || "";
-    if (perfil.city) document.getElementById("ciudad").value = perfil.city;
+  if(perfil){
+    $("conductor").value=perfil.full_name||"";
+    if(perfil.city) $("ciudad").value=perfil.city;
   }
 
-  const { data: vehiculos, error: errorVehiculo } = await supabaseClient
+  const {data:vehiculos,error:errorVehiculo}=await supabaseClient
     .from("vehicles")
-    .select("id, plate, configuration, body_type, city")
-    .eq("owner_id", user.id)
-    .order("created_at", { ascending: false })
+    .select("id,plate,configuration,body_type,city")
+    .eq("owner_id",user.id)
+    .order("created_at",{ascending:false})
     .limit(1);
 
-  if (errorVehiculo) {
-    mensaje.textContent = "Perfil consultado, pero no se pudo consultar el vehículo: " + errorVehiculo.message;
+  if(errorVehiculo){
+    mensaje.textContent="Perfil consultado, pero no se pudo consultar el vehículo: "+errorVehiculo.message;
     return;
   }
 
-  if (vehiculos && vehiculos.length > 0) {
-    const vehiculo = vehiculos[0];
-    document.getElementById("placa").value = vehiculo.plate || "";
-    document.getElementById("config").value = vehiculo.configuration || "3S3";
-    document.getElementById("carroceria").value = vehiculo.body_type || "Estacas";
-    if (vehiculo.city) document.getElementById("ciudad").value = vehiculo.city;
-    mensaje.textContent = "Tus datos fueron recuperados de Supabase.";
-  } else {
-    mensaje.textContent = "Tu cuenta está lista. Registra tu tractocamión para guardarlo.";
+  if(vehiculos&&vehiculos.length>0){
+    const v=vehiculos[0];
+    $("placa").value=v.plate||"";
+    $("config").value=v.configuration||"3S3";
+    $("carroceria").value=v.body_type||"Estacas";
+    if(v.city) $("ciudad").value=v.city;
+    mensaje.textContent="Tus datos fueron recuperados de Supabase.";
+  }else{
+    mensaje.textContent="Tu cuenta está lista. Registra tu tractocamión para guardarlo.";
   }
 }
 
-async function cargarEmpresaDesdeSupabase(user) {
-  const estado = document.getElementById("estadoEmpresa");
-  const formulario = document.getElementById("formularioEmpresa");
-  const boton = document.getElementById("enviarEmpresa");
+async function cargarEmpresaDesdeSupabase(user){
+  const estado=$("estadoEmpresa");
+  const formulario=$("formularioEmpresa");
+  const boton=$("enviarEmpresa");
 
-  estado.textContent = "Consultando solicitudes anteriores...";
+  estado.textContent="Consultando solicitudes anteriores...";
   formulario.classList.remove("hidden");
-  boton.disabled = false;
-  solicitudEmpresaExistente = null;
+  boton.disabled=false;
+  solicitudEmpresaExistente=null;
 
-  const { data, error } = await supabaseClient
+  const {data,error}=await supabaseClient
     .from("company_verifications")
-    .select("legal_name, nit, transport_authorization_reference, document_storage_path, status, submitted_at")
-    .eq("user_id", user.id)
+    .select("legal_name,nit,transport_authorization_reference,document_storage_path,status,submitted_at,review_notes")
+    .eq("user_id",user.id)
     .maybeSingle();
 
-  if (error) {
-    estado.textContent = "No se pudo consultar la solicitud: " + error.message;
+  if(error){
+    estado.textContent="No se pudo consultar la solicitud: "+error.message;
     return;
   }
 
-  if (!data) {
-    estado.textContent = "Todavía no has enviado una solicitud de verificación.";
+  if(!data){
+    estado.textContent="Todavía no has enviado una solicitud de verificación.";
     return;
   }
 
-  solicitudEmpresaExistente = data;
-  document.getElementById("razonSocial").value = data.legal_name || "";
-  document.getElementById("nitEmpresa").value = data.nit || "";
-  document.getElementById("referenciaAutorizacion").value = data.transport_authorization_reference || "";
+  solicitudEmpresaExistente=data;
+  $("razonSocial").value=data.legal_name||"";
+  $("nitEmpresa").value=data.nit||"";
+  $("referenciaAutorizacion").value=data.transport_authorization_reference||"";
 
-  const estados = {
-    pending: "Pendiente de revisión",
-    verified: "Empresa verificada",
-    rejected: "Solicitud rechazada",
-    suspended: "Verificación suspendida",
-    not_submitted: "No enviada"
+  const estados={
+    pending:"Pendiente de revisión",
+    verified:"Empresa verificada",
+    rejected:"Solicitud rechazada",
+    suspended:"Verificación suspendida",
+    not_submitted:"No enviada"
   };
 
-  estado.innerHTML = '<span class="status">' +
-    (estados[data.status] || "Estado: " + data.status) +
-    '</span><p class="small">Ya existe una solicitud asociada a esta cuenta. Por seguridad, este formulario no permite crear una segunda solicitud.</p>';
+  estado.innerHTML='<span class="status '+data.status+'">'+
+    (estados[data.status]||"Estado: "+escaparHTML(data.status))+
+    '</span><p class="small">Ya existe una solicitud asociada a esta cuenta. Por seguridad, este formulario no permite crear una segunda solicitud.</p>'+
+    (data.review_notes?'<p class="small"><b>Observaciones:</b> '+escaparHTML(data.review_notes)+'</p>':"");
 
-  formulario.querySelectorAll("input").forEach(input => input.disabled = true);
-  boton.disabled = true;
-  boton.textContent = "Solicitud ya registrada";
+  formulario.querySelectorAll("input").forEach(input=>input.disabled=true);
+  boton.disabled=true;
+  boton.textContent="Solicitud ya registrada";
 }
 
-async function mostrarSesion() {
-  const { data, error } = await supabaseClient.auth.getUser();
+function escaparHTML(valor){
+  return String(valor??"").replace(/[&<>"']/g,c=>({
+    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+  })[c]);
+}
 
-  if (error) {
-    estadoAcceso.textContent = "No pudimos comprobar tu sesión. Intenta recargar la página.";
+async function comprobarAdministrador(user){
+  const {data,error}=await supabaseClient
+    .from("profiles")
+    .select("role")
+    .eq("id",user.id)
+    .maybeSingle();
+
+  if(error){
+    esAdministrador=false;
+    $("tabAdmin").classList.add("hidden");
+    return;
+  }
+
+  esAdministrador=!!data&&data.role==="admin";
+  $("tabAdmin").classList.toggle("hidden",!esAdministrador);
+
+  if(esAdministrador){
+    $("mensajeAdmin").textContent="Sesión de administrador reconocida.";
+  }
+}
+
+async function mostrarSesion(){
+  const {data,error}=await supabaseClient.auth.getUser();
+
+  if(error){
+    estadoAcceso.textContent="No pudimos comprobar tu sesión. Intenta recargar la página.";
     contenidoApp.classList.add("hidden");
     return;
   }
 
-  if (data.user) {
-    usuarioActual = data.user;
-    estadoAcceso.textContent = "Sesión iniciada: " + (data.user.email || "cuenta Google");
+  if(data.user){
+    usuarioActual=data.user;
+    estadoAcceso.textContent="Sesión iniciada: "+(data.user.email||"cuenta Google");
     googleLogin.classList.add("hidden");
     googleLogout.classList.remove("hidden");
     contenidoApp.classList.remove("hidden");
+
+    await comprobarAdministrador(data.user);
     await cargarPerfilDesdeSupabase(data.user);
     await cargarEmpresaDesdeSupabase(data.user);
-  } else {
-    usuarioActual = null;
-    estadoAcceso.textContent = "Inicia sesión con Google para acceder a RUTA CARGA.";
+
+    if(esAdministrador) await cargarSolicitudesAdmin();
+  }else{
+    usuarioActual=null;
+    esAdministrador=false;
+    $("tabAdmin").classList.add("hidden");
+    estadoAcceso.textContent="Inicia sesión con Google para acceder a RUTA CARGA.";
     googleLogin.classList.remove("hidden");
-    googleLogin.disabled = false;
+    googleLogin.disabled=false;
     googleLogout.classList.add("hidden");
     contenidoApp.classList.add("hidden");
   }
 }
 
-supabaseClient.auth.onAuthStateChange(() => {
-  setTimeout(() => mostrarSesion(), 0);
+supabaseClient.auth.onAuthStateChange(()=>{
+  setTimeout(()=>mostrarSesion(),0);
 });
 mostrarSesion();
 
+/* ADMINISTRACIÓN */
+async function cargarSolicitudesAdmin(){
+  const mensaje=$("mensajeAdmin");
+  const lista=$("listaAdmin");
+
+  if(!usuarioActual||!esAdministrador){
+    mensaje.textContent="No tienes permisos para consultar esta sección.";
+    lista.innerHTML="";
+    return;
+  }
+
+  mensaje.textContent="Consultando solicitudes...";
+  lista.innerHTML="";
+
+  const filtro=$("filtroAdmin").value;
+
+  let consulta=supabaseClient
+    .from("company_verifications")
+    .select("user_id,legal_name,nit,transport_authorization_reference,document_storage_path,status,submitted_at,review_notes,reviewed_at,reviewed_by")
+    .order("submitted_at",{ascending:false});
+
+  if(filtro!=="all") consulta=consulta.eq("status",filtro);
+
+  const {data,error}=await consulta;
+
+  if(error){
+    mensaje.textContent="No se pudieron consultar las solicitudes: "+error.message;
+    return;
+  }
+
+  if(!data||data.length===0){
+    mensaje.textContent="No hay solicitudes en esta categoría.";
+    lista.innerHTML='<div class="empty">No se encontraron solicitudes.</div>';
+    return;
+  }
+
+  mensaje.textContent="Solicitudes encontradas: "+data.length;
+
+  for(const solicitud of data){
+    const tarjeta=document.createElement("article");
+    tarjeta.className="request";
+
+    const estados={
+      pending:"Pendiente de revisión",
+      verified:"Aprobada",
+      rejected:"Rechazada",
+      suspended:"Suspendida",
+      not_submitted:"No enviada"
+    };
+
+    const fecha=solicitud.submitted_at
+      ?new Date(solicitud.submitted_at).toLocaleString("es-CO")
+      :"No disponible";
+
+    tarjeta.innerHTML=`
+      <span class="status ${escaparHTML(solicitud.status)}">${escaparHTML(estados[solicitud.status]||solicitud.status)}</span>
+      <h3>${escaparHTML(solicitud.legal_name)}</h3>
+      <p class="small"><b>NIT:</b> ${escaparHTML(solicitud.nit)}</p>
+      <p class="small"><b>Referencia:</b> ${escaparHTML(solicitud.transport_authorization_reference||"No indicada")}</p>
+      <p class="small"><b>Fecha de solicitud:</b> ${escaparHTML(fecha)}</p>
+      <p class="small"><b>ID de usuario:</b> ${escaparHTML(solicitud.user_id)}</p>
+      ${solicitud.review_notes?`<p class="small"><b>Observaciones:</b> ${escaparHTML(solicitud.review_notes)}</p>`:""}
+      <div class="actions">
+        <button class="btn secondary documentoBtn" type="button">Abrir documento privado</button>
+      </div>
+      ${solicitud.status==="pending"?`
+        <div class="actions">
+          <button class="btn success aprobarBtn" type="button">Aprobar empresa</button>
+          <button class="btn danger rechazarBtn" type="button">Rechazar solicitud</button>
+        </div>`:""}
+      <p class="small resultadoAccion" aria-live="polite"></p>
+    `;
+
+    lista.appendChild(tarjeta);
+
+    tarjeta.querySelector(".documentoBtn").addEventListener("click",async()=>{
+      const btn=tarjeta.querySelector(".documentoBtn");
+      const resultado=tarjeta.querySelector(".resultadoAccion");
+      btn.disabled=true;
+      resultado.textContent="Generando enlace privado temporal...";
+
+      try{
+        const {data:archivo,error:archivoError}=await supabaseClient.storage
+          .from("company-documents")
+          .createSignedUrl(solicitud.document_storage_path,300);
+
+        if(archivoError) throw archivoError;
+        if(!archivo?.signedUrl) throw new Error("No se recibió el enlace del documento.");
+
+        const ventana=window.open(archivo.signedUrl,"_blank","noopener,noreferrer");
+        if(!ventana){
+          resultado.textContent="El navegador bloqueó la ventana. Permite ventanas emergentes e inténtalo de nuevo.";
+        }else{
+          resultado.textContent="Documento abierto. El enlace temporal vence en 5 minutos.";
+        }
+      }catch(e){
+        resultado.textContent="No se pudo abrir el documento: "+e.message;
+      }finally{
+        btn.disabled=false;
+      }
+    });
+
+    const aprobar=tarjeta.querySelector(".aprobarBtn");
+    if(aprobar){
+      aprobar.addEventListener("click",async()=>{
+        if(!confirm("¿Confirmas que deseas APROBAR esta empresa?")) return;
+        const resultado=tarjeta.querySelector(".resultadoAccion");
+        aprobar.disabled=true;
+        resultado.textContent="Procesando aprobación...";
+
+        const {error:rpcError}=await supabaseClient.rpc("approve_company",{
+          p_user_id:solicitud.user_id
+        });
+
+        if(rpcError){
+          resultado.textContent="No se pudo aprobar: "+rpcError.message;
+          aprobar.disabled=false;
+          return;
+        }
+
+        resultado.textContent="Empresa aprobada correctamente.";
+        await cargarSolicitudesAdmin();
+      });
+    }
+
+    const rechazar=tarjeta.querySelector(".rechazarBtn");
+    if(rechazar){
+      rechazar.addEventListener("click",async()=>{
+        const motivo=prompt("Escribe el motivo del rechazo (mínimo 5 caracteres):");
+        if(motivo===null) return;
+        if(motivo.trim().length<5){
+          alert("El motivo debe tener al menos 5 caracteres.");
+          return;
+        }
+
+        if(!confirm("¿Confirmas que deseas RECHAZAR esta solicitud?")) return;
+
+        const resultado=tarjeta.querySelector(".resultadoAccion");
+        rechazar.disabled=true;
+        resultado.textContent="Procesando rechazo...";
+
+        const {error:rpcError}=await supabaseClient.rpc("reject_company",{
+          p_user_id:solicitud.user_id,
+          p_reason:motivo.trim()
+        });
+
+        if(rpcError){
+          resultado.textContent="No se pudo rechazar: "+rpcError.message;
+          rechazar.disabled=false;
+          return;
+        }
+
+        resultado.textContent="Solicitud rechazada correctamente.";
+        await cargarSolicitudesAdmin();
+      });
+    }
+  }
+}
+
+$("recargarAdmin").addEventListener("click",cargarSolicitudesAdmin);
+$("filtroAdmin").addEventListener("change",cargarSolicitudesAdmin);
+
+/* CARGAS DE DEMOSTRACIÓN */
 const demo=[
 {o:"Bogotá",d:"Cúcuta",t:"General",p:6800000,f:"2026-11-12"},
 {o:"Medellín",d:"Bogotá",t:"Contenedor",p:5200000,f:"2026-11-13"},
@@ -380,221 +586,152 @@ const todas=()=>[...personal,...demo];
 const dinero=n=>new Intl.NumberFormat("es-CO",{style:"currency",currency:"COP",maximumFractionDigits:0}).format(n||0);
 
 function normalizar(texto){
-return String(texto||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().trim();
+  return String(texto||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().trim();
 }
 function coincide(lugar,busqueda){
-return !busqueda||normalizar(lugar).includes(normalizar(busqueda));
+  return !busqueda||normalizar(lugar).includes(normalizar(busqueda));
 }
 
 function tarjeta(x){
-return `<article class="load">
-<div class="route">${x.o} <span>→</span> ${x.d}</div>
-<div class="meta"><span class="chip">${x.t}</span><span class="chip">Tractocamión</span><span class="chip">Cargue: ${x.f||"Por confirmar"}</span></div>
-<div class="price">${dinero(x.p)}</div>
-<p class="small">Publicación ficticia de demostración. Contacto no disponible.</p>
-<button class="btn secondary" onclick="alert('Esta función estará disponible cuando conectemos la plataforma y verifiquemos las empresas.')">Ver contacto</button>
-</article>`;
+  return `<article class="load">
+  <div class="route">${escaparHTML(x.o)} <span>→</span> ${escaparHTML(x.d)}</div>
+  <div class="meta"><span class="chip">${escaparHTML(x.t)}</span><span class="chip">Tractocamión</span><span class="chip">Cargue: ${escaparHTML(x.f||"Por confirmar")}</span></div>
+  <div class="price">${dinero(x.p)}</div>
+  <p class="small">Publicación ficticia de demostración. Contacto no disponible.</p>
+  <button class="btn secondary" onclick="alert('Esta función estará disponible cuando conectemos la plataforma y verifiquemos las empresas.')">Ver contacto</button>
+  </article>`;
 }
 
 function pintar(lista=todas()){
-document.getElementById("cards").innerHTML=lista.length?lista.map(tarjeta).join(""):'<div class="empty">No encontramos oportunidades con esos filtros.</div>';
-document.getElementById("contador").textContent=lista.length+" publicaciones demo";
+  $("cards").innerHTML=lista.length?lista.map(tarjeta).join(""):'<div class="empty">No encontramos oportunidades con esos filtros.</div>';
+  $("contador").textContent=lista.length+" publicaciones demo";
 }
 
 document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{
-document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active",x===b));
-document.querySelectorAll(".view").forEach(x=>x.classList.toggle("hidden",x.id!==b.dataset.tab));
+  if(b.dataset.tab==="administracion"&&!esAdministrador) return;
+  document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active",x===b));
+  document.querySelectorAll(".view").forEach(x=>x.classList.toggle("hidden",x.id!==b.dataset.tab));
+  if(b.dataset.tab==="administracion") cargarSolicitudesAdmin();
 });
 
-document.getElementById("filtrar").onclick=()=>{
-let o=document.getElementById("origen").value;
-let d=document.getElementById("destino").value;
-let t=document.getElementById("tipo").value;
-let f=document.getElementById("fecha").value;
-pintar(todas().filter(x=>coincide(x.o,o)&&coincide(x.d,d)&&(!t||x.t===t)&&(!f||x.f===f)));
+$("filtrar").onclick=()=>{
+  const o=$("origen").value,d=$("destino").value,t=$("tipo").value,f=$("fecha").value;
+  pintar(todas().filter(x=>coincide(x.o,o)&&coincide(x.d,d)&&(!t||x.t===t)&&(!f||x.f===f)));
 };
 
-document.getElementById("limpiar").onclick=()=>{
-["origen","destino","tipo","fecha"].forEach(id=>document.getElementById(id).value="");
-pintar();
+$("limpiar").onclick=()=>{
+  ["origen","destino","tipo","fecha"].forEach(id=>$(id).value="");
+  pintar();
 };
 
-document.getElementById("buscarRetorno").onclick=()=>{
-let o=document.getElementById("retOrigen").value;
-let d=document.getElementById("retDestino").value;
-let encontrados=todas().filter(x=>coincide(x.o,o)&&coincide(x.d,d));
-document.getElementById("retornoCards").innerHTML=encontrados.length?encontrados.map(tarjeta).join(""):'<div class="empty">No hay cargas demo para esta ruta. En la versión real se consultarán las oportunidades publicadas.</div>';
+$("buscarRetorno").onclick=()=>{
+  const o=$("retOrigen").value,d=$("retDestino").value;
+  const encontrados=todas().filter(x=>coincide(x.o,o)&&coincide(x.d,d));
+  $("retornoCards").innerHTML=encontrados.length?encontrados.map(tarjeta).join(""):'<div class="empty">No hay cargas demo para esta ruta. En la versión real se consultarán las oportunidades publicadas.</div>';
 };
 
-document.getElementById("calcular").onclick=()=>{
-let p=Number(document.getElementById("pago").value)||0;
-let c=(Number(document.getElementById("comb").value)||0)+(Number(document.getElementById("peajes").value)||0)+(Number(document.getElementById("otros").value)||0);
-let u=p-c;
-document.getElementById("costos").textContent=dinero(c);
-document.getElementById("utilidad").textContent=dinero(u);
-document.getElementById("margen").textContent=p?(u/p*100).toFixed(1).replace(".",",")+"%":"—";
+$("calcular").onclick=()=>{
+  const p=Number($("pago").value)||0;
+  const c=(Number($("comb").value)||0)+(Number($("peajes").value)||0)+(Number($("otros").value)||0);
+  const u=p-c;
+  $("costos").textContent=dinero(c);
+  $("utilidad").textContent=dinero(u);
+  $("margen").textContent=p?(u/p*100).toFixed(1).replace(".",",")+"%":"—";
 };
 
-document.getElementById("guardarPerfil").onclick=async()=>{
-const boton = document.getElementById("guardarPerfil");
-const mensaje = document.getElementById("mensajePerfil");
+$("guardarPerfil").onclick=async()=>{
+  const boton=$("guardarPerfil"),mensaje=$("mensajePerfil");
 
-if (!usuarioActual) {
-  mensaje.textContent = "Debes iniciar sesión con Google antes de guardar.";
-  return;
-}
+  if(!usuarioActual){mensaje.textContent="Debes iniciar sesión con Google antes de guardar.";return;}
 
-const conductor = document.getElementById("conductor").value.trim();
-const placa = document.getElementById("placa").value.trim().toUpperCase();
-const config = document.getElementById("config").value;
-const carroceria = document.getElementById("carroceria").value;
-const ciudad = document.getElementById("ciudad").value;
+  const conductor=$("conductor").value.trim();
+  const placa=$("placa").value.trim().toUpperCase();
+  const config=$("config").value;
+  const carroceria=$("carroceria").value;
+  const ciudad=$("ciudad").value;
 
-if (!conductor || !placa || !ciudad) {
-  mensaje.textContent = "Completa el nombre, la placa y la ciudad.";
-  return;
-}
+  if(!conductor||!placa||!ciudad){mensaje.textContent="Completa el nombre, la placa y la ciudad.";return;}
+  if(placa.length<5){mensaje.textContent="Verifica la placa del tractocamión.";return;}
 
-if (placa.length < 5) {
-  mensaje.textContent = "Verifica la placa del tractocamión.";
-  return;
-}
+  boton.disabled=true;
+  boton.textContent="Guardando...";
+  mensaje.textContent="Guardando tus datos en Supabase...";
 
-boton.disabled = true;
-boton.textContent = "Guardando...";
-mensaje.textContent = "Guardando tus datos en Supabase...";
+  try{
+    const {data:perfilActual,error:consultaPerfilError}=await supabaseClient
+      .from("profiles").select("id").eq("id",usuarioActual.id).maybeSingle();
 
-try {
-  const { data: perfilActual, error: consultaPerfilError } = await supabaseClient
-    .from("profiles")
-    .select("id")
-    .eq("id", usuarioActual.id)
-    .maybeSingle();
+    if(consultaPerfilError) throw new Error("No se pudo consultar el perfil: "+consultaPerfilError.message);
+    if(!perfilActual) throw new Error("No encontramos tu perfil de usuario en Supabase.");
 
-  if (consultaPerfilError) throw new Error("No se pudo consultar el perfil: " + consultaPerfilError.message);
-  if (!perfilActual) throw new Error("No encontramos tu perfil de usuario en Supabase.");
+    const {error:actualizarPerfilError}=await supabaseClient
+      .from("profiles").update({full_name:conductor,city:ciudad}).eq("id",usuarioActual.id);
 
-  const { error: actualizarPerfilError } = await supabaseClient
-    .from("profiles")
-    .update({
-      full_name: conductor,
-      city: ciudad
-    })
-    .eq("id", usuarioActual.id);
+    if(actualizarPerfilError) throw new Error("Error guardando los datos personales: "+actualizarPerfilError.message);
 
-  if (actualizarPerfilError) throw new Error("Error guardando los datos personales: " + actualizarPerfilError.message);
+    const {data:vehiculos,error:consultaVehiculoError}=await supabaseClient
+      .from("vehicles").select("id").eq("owner_id",usuarioActual.id)
+      .order("created_at",{ascending:false}).limit(1);
 
-  const { data: vehiculos, error: consultaVehiculoError } = await supabaseClient
-    .from("vehicles")
-    .select("id")
-    .eq("owner_id", usuarioActual.id)
-    .order("created_at", { ascending: false })
-    .limit(1);
+    if(consultaVehiculoError) throw new Error("Error consultando el vehículo: "+consultaVehiculoError.message);
 
-  if (consultaVehiculoError) throw new Error("Error consultando el vehículo: " + consultaVehiculoError.message);
+    const datosVehiculo={
+      owner_id:usuarioActual.id,plate:placa,configuration:config,
+      body_type:carroceria,city:ciudad,availability:"available"
+    };
 
-  const datosVehiculo = {
-    owner_id: usuarioActual.id,
-    plate: placa,
-    configuration: config,
-    body_type: carroceria,
-    city: ciudad,
-    availability: "available"
-  };
+    if(vehiculos&&vehiculos.length>0){
+      const {error}=await supabaseClient.from("vehicles")
+        .update({plate:placa,configuration:config,body_type:carroceria,city:ciudad,availability:"available"})
+        .eq("id",vehiculos[0].id).eq("owner_id",usuarioActual.id);
+      if(error) throw new Error("Error actualizando el vehículo: "+error.message);
+    }else{
+      const {error}=await supabaseClient.from("vehicles").insert(datosVehiculo);
+      if(error) throw new Error("Error registrando el vehículo: "+error.message);
+    }
 
-  if (vehiculos && vehiculos.length > 0) {
-    const { error: actualizarVehiculoError } = await supabaseClient
-      .from("vehicles")
-      .update({
-        plate: placa,
-        configuration: config,
-        body_type: carroceria,
-        city: ciudad,
-        availability: "available"
-      })
-      .eq("id", vehiculos[0].id)
-      .eq("owner_id", usuarioActual.id);
-
-    if (actualizarVehiculoError) throw new Error("Error actualizando el vehículo: " + actualizarVehiculoError.message);
-  } else {
-    const { error: insertarVehiculoError } = await supabaseClient
-      .from("vehicles")
-      .insert(datosVehiculo);
-
-    if (insertarVehiculoError) throw new Error("Error registrando el vehículo: " + insertarVehiculoError.message);
+    mensaje.textContent="¡Perfecto! Tu perfil y tu tractocamión quedaron guardados en Supabase.";
+  }catch(error){
+    mensaje.textContent=error.message||"Ocurrió un error al guardar.";
+  }finally{
+    boton.disabled=false;
+    boton.textContent="Guardar perfil";
   }
-
-  mensaje.textContent = "¡Perfecto! Tu perfil y tu tractocamión quedaron guardados en Supabase.";
-} catch (error) {
-  mensaje.textContent = error.message || "Ocurrió un error al guardar. Intenta nuevamente.";
-} finally {
-  boton.disabled = false;
-  boton.textContent = "Guardar perfil";
-}
 };
 
-document.getElementById("enviarEmpresa").onclick=async()=>{
-const boton=document.getElementById("enviarEmpresa");
-const mensaje=document.getElementById("mensajeEmpresa");
-const razonSocial=document.getElementById("razonSocial").value.trim();
-const nit=document.getElementById("nitEmpresa").value.trim();
-const referencia=document.getElementById("referenciaAutorizacion").value.trim();
-const archivo=document.getElementById("documentoEmpresa").files[0];
+$("enviarEmpresa").onclick=async()=>{
+  const boton=$("enviarEmpresa"),mensaje=$("mensajeEmpresa");
+  const razonSocial=$("razonSocial").value.trim();
+  const nit=$("nitEmpresa").value.trim();
+  const referencia=$("referenciaAutorizacion").value.trim();
+  const archivo=$("documentoEmpresa").files[0];
 
-if(!usuarioActual){
-  mensaje.textContent="Debes iniciar sesión con Google.";
-  return;
-}
-if(solicitudEmpresaExistente){
-  mensaje.textContent="Esta cuenta ya tiene una solicitud registrada.";
-  return;
-}
-if(!razonSocial||!nit){
-  mensaje.textContent="Completa la razón social y el NIT.";
-  return;
-}
-if(!archivo){
-  mensaje.textContent="Selecciona el documento de soporte de la empresa.";
-  return;
-}
-if(archivo.size>10*1024*1024){
-  mensaje.textContent="El documento supera el límite de 10 MB.";
-  return;
-}
-const tiposPermitidos=["application/pdf","image/jpeg","image/png"];
-if(!tiposPermitidos.includes(archivo.type)){
-  mensaje.textContent="Solo se permiten archivos PDF, JPG o PNG.";
-  return;
-}
+  if(!usuarioActual){mensaje.textContent="Debes iniciar sesión con Google.";return;}
+  if(solicitudEmpresaExistente){mensaje.textContent="Esta cuenta ya tiene una solicitud registrada.";return;}
+  if(!razonSocial||!nit){mensaje.textContent="Completa la razón social y el NIT.";return;}
+  if(!archivo){mensaje.textContent="Selecciona el documento de soporte de la empresa.";return;}
+  if(archivo.size>10*1024*1024){mensaje.textContent="El documento supera el límite de 10 MB.";return;}
 
-boton.disabled=true;
-boton.textContent="Enviando solicitud...";
-mensaje.textContent="Cargando el documento privado...";
+  const tiposPermitidos=["application/pdf","image/jpeg","image/png"];
+  if(!tiposPermitidos.includes(archivo.type)){mensaje.textContent="Solo se permiten archivos PDF, JPG o PNG.";return;}
 
-let rutaArchivo=null;
+  boton.disabled=true;
+  boton.textContent="Enviando solicitud...";
+  mensaje.textContent="Cargando el documento privado...";
+  let rutaArchivo=null;
 
-try{
-  const nombreSeguro=archivo.name
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g,"")
-    .replace(/[^a-zA-Z0-9._-]/g,"_");
+  try{
+    const nombreSeguro=archivo.name.normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-zA-Z0-9._-]/g,"_");
+    rutaArchivo=usuarioActual.id+"/"+Date.now()+"_"+nombreSeguro;
 
-  rutaArchivo=usuarioActual.id+"/"+Date.now()+"_"+nombreSeguro;
+    const {error:errorSubida}=await supabaseClient.storage.from("company-documents")
+      .upload(rutaArchivo,archivo,{contentType:archivo.type,upsert:false});
 
-  const {error:errorSubida}=await supabaseClient.storage
-    .from("company-documents")
-    .upload(rutaArchivo,archivo,{
-      contentType:archivo.type,
-      upsert:false
-    });
+    if(errorSubida) throw new Error("No se pudo cargar el documento: "+errorSubida.message);
 
-  if(errorSubida) throw new Error("No se pudo cargar el documento: "+errorSubida.message);
+    mensaje.textContent="Documento cargado. Registrando solicitud...";
 
-  mensaje.textContent="Documento cargado. Registrando solicitud...";
-
-  const {error:errorRegistro}=await supabaseClient
-    .from("company_verifications")
-    .insert({
+    const {error:errorRegistro}=await supabaseClient.from("company_verifications").insert({
       user_id:usuarioActual.id,
       legal_name:razonSocial,
       nit:nit,
@@ -602,35 +739,32 @@ try{
       document_storage_path:rutaArchivo
     });
 
-  if(errorRegistro){
-    await supabaseClient.storage.from("company-documents").remove([rutaArchivo]);
-    rutaArchivo=null;
-    throw new Error("No se pudo registrar la solicitud: "+errorRegistro.message);
+    if(errorRegistro){
+      await supabaseClient.storage.from("company-documents").remove([rutaArchivo]);
+      rutaArchivo=null;
+      throw new Error("No se pudo registrar la solicitud: "+errorRegistro.message);
+    }
+
+    mensaje.textContent="¡Solicitud enviada! Tu empresa quedó registrada para revisión. Todavía no está verificada.";
+    await cargarEmpresaDesdeSupabase(usuarioActual);
+  }catch(error){
+    mensaje.textContent=error.message||"Ocurrió un error al enviar la solicitud.";
+  }finally{
+    boton.disabled=!!solicitudEmpresaExistente;
+    if(!solicitudEmpresaExistente) boton.textContent="Enviar solicitud de verificación";
   }
-
-  mensaje.textContent="¡Solicitud enviada! Tu empresa quedó registrada para revisión. Todavía no está verificada.";
-  await cargarEmpresaDesdeSupabase(usuarioActual);
-
-}catch(error){
-  mensaje.textContent=error.message||"Ocurrió un error al enviar la solicitud.";
-}finally{
-  boton.disabled=!!solicitudEmpresaExistente;
-  if(!solicitudEmpresaExistente) boton.textContent="Enviar solicitud de verificación";
-}
 };
 
-document.getElementById("abrirModal").onclick=()=>document.getElementById("modal").classList.add("open");
-document.getElementById("cerrarModal").onclick=()=>document.getElementById("modal").classList.remove("open");
+$("abrirModal").onclick=()=>$("modal").classList.add("open");
+$("cerrarModal").onclick=()=>$("modal").classList.remove("open");
 
-document.getElementById("guardarCarga").onclick=()=>{
-let o=document.getElementById("nOrigen").value.trim();
-let d=document.getElementById("nDestino").value.trim();
-let p=Number(document.getElementById("nPago").value);
-if(!o||!d||!p){alert("Completa origen, destino y pago ofrecido.");return;}
-personal.unshift({o,d,p,t:document.getElementById("nTipo").value,f:document.getElementById("nFecha").value});
-document.getElementById("modal").classList.remove("open");
-pintar();
-alert("Guardado como demostración únicamente en este dispositivo. No se publicó para otros usuarios.");
+$("guardarCarga").onclick=()=>{
+  const o=$("nOrigen").value.trim(),d=$("nDestino").value.trim(),p=Number($("nPago").value);
+  if(!o||!d||!p){alert("Completa origen, destino y pago ofrecido.");return;}
+  personal.unshift({o,d,p,t:$("nTipo").value,f:$("nFecha").value});
+  $("modal").classList.remove("open");
+  pintar();
+  alert("Guardado como demostración únicamente en este dispositivo. No se publicó para otros usuarios.");
 };
 
 pintar();
