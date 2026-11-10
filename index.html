@@ -849,6 +849,17 @@ async function cargarInteresadosEmpresa(){
   const visibles=filtro==="all"?solicitudes:solicitudes.filter(s=>s.status===filtro);
   mensaje.textContent=solicitudes.length?"Solicitudes recibidas: "+solicitudes.length+" · Mostrando: "+visibles.length:"Todavía no hay transportadores interesados en tus cargas.";
   if(!visibles.length){lista.innerHTML='<div class="empty">'+(solicitudes.length?'No hay solicitudes con este estado.':'Cuando un transportador manifieste interés, aparecerá aquí.')+'</div>';return;}
+  const historialPorSolicitud={};
+  const {data:historialData,error:errorHistorial}=await supabaseClient
+    .from("load_interest_status_history")
+    .select("request_id,old_status,new_status,changed_at")
+    .in("request_id",visibles.map(s=>s.id))
+    .order("changed_at",{ascending:true});
+  if(errorHistorial){console.error("No se pudo consultar el historial:",errorHistorial.message);}
+  (historialData||[]).forEach(h=>{
+    if(!historialPorSolicitud[h.request_id])historialPorSolicitud[h.request_id]=[];
+    historialPorSolicitud[h.request_id].push(h);
+  });
   const grupos=new Map();
   for(const solicitud of visibles){
     const carga=cargasReales.find(x=>x.id===solicitud.load_id);
@@ -868,10 +879,16 @@ async function cargarInteresadosEmpresa(){
       const numero=normalizarWhatsApp(solicitud.transporter_whatsapp)||"";
       const mensajeWA=encodeURIComponent("Hola "+solicitud.transporter_name+", recibimos tu interés en nuestra carga "+grupo.origen+" → "+grupo.destino+". Te contactamos desde RUTA CARGA.");
       const tarjeta=document.createElement("article");tarjeta.className="load";
+      const eventos=[{estado:"Solicitud recibida",fecha:solicitud.created_at}];
+      (historialPorSolicitud[solicitud.id]||[]).forEach(h=>{
+        eventos.push({estado:(etiquetas[h.old_status]||h.old_status)+" → "+(etiquetas[h.new_status]||h.new_status),fecha:h.changed_at});
+      });
+      const lineaTiempo=eventos.map(e=>'<li><b>'+escaparHTML(e.estado)+'</b><br><span class="small">'+escaparHTML(new Date(e.fecha).toLocaleString("es-CO"))+'</span></li>').join("");
       tarjeta.innerHTML='<h3>'+escaparHTML(solicitud.transporter_name)+'</h3>'+
         '<p class="small"><b>WhatsApp:</b> '+escaparHTML(solicitud.transporter_whatsapp)+'</p>'+
         '<p class="small"><b>Solicitud:</b> '+escaparHTML(fecha)+'</p>'+
         '<p class="small"><b>Estado:</b> <span class="status">'+escaparHTML(etiquetas[solicitud.status]||solicitud.status)+'</span></p>'+
+        '<details class="small" style="margin:10px 0"><summary>Ver historial de actividad ('+eventos.length+')</summary><ol style="padding-left:22px;margin-top:8px">'+lineaTiempo+'</ol></details>'+
         '<div class="actions"><a class="btn success" href="https://wa.me/'+escaparHTML(numero)+'?text='+mensajeWA+'" target="_blank" rel="noopener noreferrer" style="text-decoration:none;display:inline-block">Contactar transportador</a>'+
         '<button class="btn secondary marcarContactado" type="button" '+(solicitud.status==="contacted"||solicitud.status==="closed"?"disabled":"")+' data-id="'+escaparHTML(solicitud.id)+'">Marcar contactado</button>'+
         '<button class="btn danger marcarCerrado" type="button" '+(solicitud.status==="closed"?"disabled":"")+' data-id="'+escaparHTML(solicitud.id)+'">Cerrar solicitud</button></div>';
