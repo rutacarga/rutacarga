@@ -662,13 +662,16 @@ async function cargarEmpresasAdmin(){
   data.forEach(c=>{
     const card=document.createElement("article");card.className="request";
     const suspended=c.status==="suspended";
+    const propia=c.user_id===usuarioActual.id;
     card.innerHTML='<span class="status '+escaparHTML(c.status)+'">'+escaparHTML(c.status)+'</span>'+
+      (propia?'<span class="status verified">Cuenta administradora protegida</span>':'')+
       '<h3>'+escaparHTML(c.legal_name)+'</h3><p class="small"><b>NIT:</b> '+escaparHTML(c.nit)+'</p>'+
       '<p class="small"><b>ID:</b> '+escaparHTML(c.user_id)+'</p>'+
-      '<div class="actions"><button class="btn '+(suspended?'success':'danger')+' estadoEmpresaBtn" type="button">'+(suspended?'Reactivar empresa':'Suspender empresa')+'</button></div>'+
+      (propia?'<p class="small">Esta es tu propia cuenta administradora. No se puede suspender desde este panel.</p>':
+      '<div class="actions"><button class="btn '+(suspended?'success':'danger')+' estadoEmpresaBtn" type="button">'+(suspended?'Reactivar empresa':'Suspender empresa')+'</button></div>')+
       '<p class="small resultadoEmpresaAdmin" aria-live="polite"></p>';
     lista.appendChild(card);
-    card.querySelector("button").addEventListener("click",async()=>{
+    if(!propia) card.querySelector("button").addEventListener("click",async()=>{
       const accion=suspended?"reactivate":"suspend";
       const motivo=prompt("Indica el motivo de "+(suspended?"reactivación":"suspensión")+" (mínimo 5 caracteres):");
       if(motivo===null)return;
@@ -699,16 +702,19 @@ async function cargarCargasAdmin(){
   data.forEach(c=>{
     const card=document.createElement("article");card.className="request";
     const retirada=c.status==="cancelled";
+    const protegida=c.id==="3001d24d-f0e0-4862-b256-a02c2a128111";
     card.innerHTML='<span class="status '+(retirada?'suspended':'verified')+'">'+(retirada?'Retirada':'Publicada')+'</span>'+
+      (protegida?'<span class="status verified">Publicación protegida</span>':'')+
       '<h3>'+escaparHTML(c.origin_city)+' → '+escaparHTML(c.destination_city)+'</h3>'+
       '<p class="small"><b>Tipo:</b> '+escaparHTML(c.cargo_type)+' · <b>Vehículo:</b> '+escaparHTML(c.vehicle_type)+'</p>'+
       '<p class="small"><b>Fecha de cargue:</b> '+escaparHTML(c.loading_date||'Sin fecha')+' · <b>Pago:</b> '+dinero(Number(c.payment))+'</p>'+
       '<p class="small"><b>ID publicación:</b> '+escaparHTML(c.id)+'</p>'+
       '<p class="small"><b>Empresa:</b> '+escaparHTML(c.company_id)+'</p>'+
-      '<div class="actions"><button class="btn '+(retirada?'success':'danger')+' estadoCargaBtn" type="button">'+(retirada?'Restaurar publicación':'Retirar publicación')+'</button></div>'+
+      (protegida?'<p class="small">Esta publicación real está protegida y no puede retirarse desde el panel administrativo.</p>':
+      '<div class="actions"><button class="btn '+(retirada?'success':'danger')+' estadoCargaBtn" type="button">'+(retirada?'Restaurar publicación':'Retirar publicación')+'</button></div>')+
       '<p class="small resultadoCargaAdmin" aria-live="polite"></p>';
     lista.appendChild(card);
-    card.querySelector("button").addEventListener("click",async()=>{
+    if(!protegida) card.querySelector("button").addEventListener("click",async()=>{
       const accion=retirada?"republish":"withdraw";
       const motivo=prompt("Motivo para "+(retirada?"restaurar":"retirar")+" la publicación (mínimo 5 caracteres):");
       if(motivo===null)return;
