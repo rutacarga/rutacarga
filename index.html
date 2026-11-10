@@ -176,6 +176,16 @@ textarea{min-height:75px;resize:vertical}
 <p class="small" id="mensajeEmpresa" aria-live="polite"></p>
 </div>
 </div>
+<div class="panel" id="panelContactoEmpresa">
+<h2>Contacto comercial de la empresa</h2>
+<p class="small">Registra el WhatsApp de contacto. Solo aparecerá en tus cargas reales cuando la empresa esté verificada y autorices expresamente su publicación.</p>
+<div class="formgrid">
+<div style="grid-column:1/-1"><label for="whatsappEmpresa">WhatsApp (incluye indicativo si no es Colombia)</label><input id="whatsappEmpresa" type="tel" maxlength="25" placeholder="Ej. 3001234567 o +573001234567"></div>
+</div>
+<label style="display:flex;align-items:center;gap:8px;margin-top:12px;color:var(--ink);font-size:13px"><input id="autorizarWhatsApp" type="checkbox" style="width:auto"> Autorizo mostrar este número públicamente en mis cargas reales.</label>
+<button class="btn" id="guardarContactoEmpresa" type="button">Guardar contacto</button>
+<p class="small" id="mensajeContactoEmpresa" aria-live="polite"></p>
+</div>
 </section>
 
 <section id="publicar" class="view hidden">
@@ -414,6 +424,7 @@ async function mostrarSesion(){
     await cargarCargasReales(data.user);
     await cargarPerfilDesdeSupabase(data.user);
     await cargarEmpresaDesdeSupabase(data.user);
+    await cargarContactoEmpresa(data.user);
 
     if(esAdministrador) await cargarSolicitudesAdmin();
   }else{
@@ -622,11 +633,17 @@ function coincide(lugar,busqueda){
 function tarjeta(x){
   const etiqueta=x.real?"CARGA REAL":"DEMO";
   const detalle=x.real?(x.description||"Publicación de empresa transportadora verificada."):"Publicación ficticia de demostración. Contacto no disponible.";
+  let contacto="";
+  if(x.real&&x.whatsapp){
+    const mensaje=encodeURIComponent("Hola, vi tu carga en RUTA CARGA: "+x.o+" → "+x.d+". ¿Sigue disponible?");
+    contacto='<div class="actions"><a class="btn success" href="https://wa.me/'+escaparHTML(x.whatsapp)+'?text='+mensaje+'" target="_blank" rel="noopener noreferrer" style="text-decoration:none;display:inline-block">Contactar por WhatsApp</a></div>';
+  }
   return '<article class="load">'+
   '<div class="route">'+escaparHTML(x.o)+' <span>→</span> '+escaparHTML(x.d)+'</div>'+
   '<div class="meta"><span class="chip">'+escaparHTML(x.t)+'</span><span class="chip">'+escaparHTML(x.v||"Tractocamión")+'</span><span class="chip">Cargue: '+escaparHTML(x.f||"Por confirmar")+'</span><span class="chip">'+etiqueta+'</span></div>'+
   '<div class="price">'+dinero(x.p)+'</div>'+
   '<p class="small">'+escaparHTML(detalle)+'</p>'+
+  contacto+
   '</article>';
 }
 
@@ -784,12 +801,79 @@ $("enviarEmpresa").onclick=async()=>{
   }
 };
 
+function normalizarWhatsApp(valor){
+  let numero=String(valor||"").replace(/\\D/g,"");
+  if(numero.length===10) numero="57"+numero;
+  if(numero.length<10||numero.length>15) return null;
+  return numero;
+}
+
+async function cargarContactoEmpresa(user){
+  const mensaje=$("mensajeContactoEmpresa");
+  const {data,error}=await supabaseClient.from("company_public_contacts")
+    .select("whatsapp,publicly_visible")
+    .eq("company_id",user.id).maybeSingle();
+  if(error){
+    mensaje.textContent="No se pudo consultar el contacto: "+error.message;
+    return;
+  }
+  if(data){
+    $("whatsappEmpresa").value=data.whatsapp||"";
+    $("autorizarWhatsApp").checked=!!data.publicly_visible;
+    mensaje.textContent=data.publicly_visible
+      ?"Contacto guardado y autorizado para mostrarse en cargas reales."
+      :"Contacto guardado de forma privada. Activa la autorización para publicarlo.";
+  }else{
+    mensaje.textContent="Todavía no has registrado un WhatsApp comercial.";
+  }
+}
+
+$("guardarContactoEmpresa").onclick=async()=>{
+  const boton=$("guardarContactoEmpresa"),mensaje=$("mensajeContactoEmpresa");
+  if(!usuarioActual){mensaje.textContent="Debes iniciar sesión con Google.";return;}
+  const numero=normalizarWhatsApp($("whatsappEmpresa").value);
+  if(!numero){mensaje.textContent="Escribe un número válido de 10 a 15 dígitos. Para Colombia puedes escribir los 10 dígitos del celular.";return;}
+  boton.disabled=true;
+  mensaje.textContent="Guardando contacto...";
+  try{
+    const {error}=await supabaseClient.from("company_public_contacts").upsert({
+      company_id:usuarioActual.id,
+      whatsapp:numero,
+      publicly_visible:$("autorizarWhatsApp").checked,
+      updated_at:new Date().toISOString()
+    },{onConflict:"company_id"});
+    if(error) throw error;
+    mensaje.textContent=$("autorizarWhatsApp").checked
+      ?"WhatsApp guardado. Autorizaste mostrarlo en tus cargas reales cuando la empresa esté verificada."
+      :"WhatsApp guardado de forma privada. No aparecerá en las cargas para otros usuarios.";
+    await cargarCargasReales(usuarioActual);
+  }catch(e){
+    mensaje.textContent="No se pudo guardar el contacto: "+(e.message||"Error desconocido");
+  }finally{
+    boton.disabled=false;
+  }
+};
+
 async function cargarCargasReales(user){
   const {data,error}=await supabaseClient.from("company_loads")
     .select("id,company_id,origin_city,destination_city,cargo_type,vehicle_type,loading_date,payment,description,status,created_at")
     .eq("status","published").order("created_at",{ascending:false});
   if(error){console.error("Error consultando cargas reales:",error.message);return;}
-  cargasReales=(data||[]).map(x=>({id:x.id,company_id:x.company_id,o:x.origin_city,d:x.destination_city,t:x.cargo_type,v:x.vehicle_type,f:x.loading_date,p:Number(x.payment),description:x.description||"",real:true}));
+  const cargas=data||[];
+  const ids=[...new Set(cargas.map(x=>x.company_id))];
+  let contactos={};
+  if(ids.length){
+    const {data:contactosData,error:errorContactos}=await supabaseClient.from("company_public_contacts")
+      .select("company_id,whatsapp")
+      .in("company_id",ids)
+      .eq("publicly_visible",true);
+    if(errorContactos){
+      console.error("Error consultando contactos públicos:",errorContactos.message);
+    }else{
+      contactos=Object.fromEntries((contactosData||[]).map(x=>[x.company_id,normalizarWhatsApp(x.whatsapp)]));
+    }
+  }
+  cargasReales=cargas.map(x=>({id:x.id,company_id:x.company_id,o:x.origin_city,d:x.destination_city,t:x.cargo_type,v:x.vehicle_type,f:x.loading_date,p:Number(x.payment),description:x.description||"",whatsapp:contactos[x.company_id]||null,real:true}));
   pintar();
 }
 
@@ -804,10 +888,9 @@ $("guardarCargaReal").onclick=async()=>{
     const {data,error}=await supabaseClient.from("company_loads").insert({company_id:usuarioActual.id,origin_city:o,destination_city:d,cargo_type:t,vehicle_type:v,loading_date:f,payment:p,description:description||null,status:"published"})
       .select("id,company_id,origin_city,destination_city,cargo_type,vehicle_type,loading_date,payment,description,status,created_at").single();
     if(error)throw error;
-    cargasReales.unshift({id:data.id,company_id:data.company_id,o:data.origin_city,d:data.destination_city,t:data.cargo_type,v:data.vehicle_type,f:data.loading_date,p:Number(data.payment),description:data.description||"",real:true});
     ["cargaOrigen","cargaDestino","cargaFecha","cargaPago","cargaDescripcion"].forEach(id=>$(id).value="");
+    await cargarCargasReales(usuarioActual);
     mensaje.textContent="¡Carga publicada correctamente! Ya aparece en las oportunidades disponibles.";
-    pintar();
   }catch(e){mensaje.textContent="No se pudo publicar: "+(e.message||"Error desconocido");}
   finally{boton.disabled=false;boton.textContent="Publicar carga";}
 };
