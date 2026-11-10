@@ -516,7 +516,10 @@ async function cargarSolicitudConductor(user){
   pintar();
 }
 
+let cargaSolicitudesConductoresAdminId=0;
+
 async function cargarSolicitudesConductoresAdmin(){
+  const cargaId=++cargaSolicitudesConductoresAdminId;
   const mensaje=$("mensajeConductoresAdmin");
   const lista=$("listaConductoresAdmin");
   if(!usuarioActual||!esAdministrador){
@@ -534,6 +537,7 @@ async function cargarSolicitudesConductoresAdmin(){
   if(filtro!=="all") consulta=consulta.eq("status",filtro);
 
   const {data,error}=await consulta;
+  if(cargaId!==cargaSolicitudesConductoresAdminId) return;
   if(error){
     mensaje.textContent="No se pudieron consultar las solicitudes: "+error.message;
     return;
