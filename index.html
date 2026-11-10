@@ -241,6 +241,28 @@ textarea{min-height:75px;resize:vertical}
 <p class="small" id="mensajeAdmin" aria-live="polite">Consultando solicitudes...</p>
 <div id="listaAdmin" class="cards"></div>
 </div>
+<div class="panel">
+<h2>Gestión de empresas</h2>
+<p class="small">Suspende empresas que incumplan las reglas o reactiva las que hayan sido revisadas. La suspensión retira sus cargas publicadas y oculta su contacto comercial.</p>
+<div class="actions"><button class="btn secondary" id="actualizarEmpresasAdmin" type="button">Actualizar empresas</button></div>
+<p class="small" id="mensajeEmpresasAdmin" aria-live="polite">Consulta las empresas registradas.</p>
+<div class="cards" id="listaEmpresasAdmin"></div>
+</div>
+<div class="panel">
+<h2>Gestión de publicaciones</h2>
+<p class="small">Consulta todas las cargas, incluidas las retiradas. Puedes retirar una publicación o restaurarla. Las acciones quedan registradas.</p>
+<div class="actions"><button class="btn secondary" id="actualizarCargasAdmin" type="button">Actualizar publicaciones</button>
+<select id="filtroCargasAdmin" style="max-width:220px"><option value="all">Todos los estados</option><option value="published">Publicadas</option><option value="cancelled">Retiradas</option></select></div>
+<p class="small" id="mensajeCargasAdmin" aria-live="polite">Consulta las publicaciones.</p>
+<div class="cards" id="listaCargasAdmin"></div>
+</div>
+<div class="panel">
+<h2>Historial administrativo</h2>
+<p class="small">Registro de suspensiones, reactivaciones y retiros/restauraciones realizados desde este panel.</p>
+<button class="btn secondary" id="actualizarHistorialAdmin" type="button">Actualizar historial</button>
+<p class="small" id="mensajeHistorialAdmin" aria-live="polite"></p>
+<div id="listaHistorialAdmin"></div>
+</div>
 </section>
 
 </div>
@@ -626,6 +648,99 @@ async function cargarSolicitudesAdmin(){
 $("recargarAdmin").addEventListener("click",cargarSolicitudesAdmin);
 $("filtroAdmin").addEventListener("change",cargarSolicitudesAdmin);
 
+async function cargarEmpresasAdmin(){
+  const mensaje=$("mensajeEmpresasAdmin"),lista=$("listaEmpresasAdmin");
+  if(!usuarioActual||!esAdministrador){mensaje.textContent="No autorizado.";return;}
+  mensaje.textContent="Consultando empresas...";
+  lista.innerHTML="";
+  const {data,error}=await supabaseClient.from("company_verifications")
+    .select("user_id,legal_name,nit,status,submitted_at")
+    .order("submitted_at",{ascending:false});
+  if(error){mensaje.textContent="No se pudieron consultar las empresas: "+error.message;return;}
+  if(!data?.length){mensaje.textContent="No hay empresas con solicitudes registradas.";lista.innerHTML='<div class="empty">Sin empresas registradas.</div>';return;}
+  mensaje.textContent="Empresas encontradas: "+data.length;
+  data.forEach(c=>{
+    const card=document.createElement("article");card.className="request";
+    const suspended=c.status==="suspended";
+    card.innerHTML='<span class="status '+escaparHTML(c.status)+'">'+escaparHTML(c.status)+'</span>'+
+      '<h3>'+escaparHTML(c.legal_name)+'</h3><p class="small"><b>NIT:</b> '+escaparHTML(c.nit)+'</p>'+
+      '<p class="small"><b>ID:</b> '+escaparHTML(c.user_id)+'</p>'+
+      '<div class="actions"><button class="btn '+(suspended?'success':'danger')+' estadoEmpresaBtn" type="button">'+(suspended?'Reactivar empresa':'Suspender empresa')+'</button></div>'+
+      '<p class="small resultadoEmpresaAdmin" aria-live="polite"></p>';
+    lista.appendChild(card);
+    card.querySelector("button").addEventListener("click",async()=>{
+      const accion=suspended?"reactivate":"suspend";
+      const motivo=prompt("Indica el motivo de "+(suspended?"reactivación":"suspensión")+" (mínimo 5 caracteres):");
+      if(motivo===null)return;
+      if(motivo.trim().length<5){alert("Escribe un motivo de al menos 5 caracteres.");return;}
+      if(!confirm("¿Confirmas "+(suspended?"reactivar":"suspender")+" esta empresa?"))return;
+      const b=card.querySelector("button"),out=card.querySelector(".resultadoEmpresaAdmin");
+      b.disabled=true;out.textContent="Procesando...";
+      const {error:rpcError}=await supabaseClient.rpc("admin_manage_company",{p_user_id:c.user_id,p_action:accion,p_reason:motivo.trim()});
+      if(rpcError){out.textContent="No se pudo completar la acción: "+rpcError.message;b.disabled=false;return;}
+      out.textContent="Acción completada.";
+      await cargarEmpresasAdmin();await cargarCargasAdmin();await cargarHistorialAdmin();
+    });
+  });
+}
+
+async function cargarCargasAdmin(){
+  const mensaje=$("mensajeCargasAdmin"),lista=$("listaCargasAdmin");
+  if(!usuarioActual||!esAdministrador){mensaje.textContent="No autorizado.";return;}
+  mensaje.textContent="Consultando publicaciones...";lista.innerHTML="";
+  let q=supabaseClient.from("company_loads")
+    .select("id,company_id,origin_city,destination_city,cargo_type,vehicle_type,loading_date,payment,status,created_at")
+    .order("created_at",{ascending:false});
+  const filtro=$("filtroCargasAdmin").value;if(filtro!=="all")q=q.eq("status",filtro);
+  const {data,error}=await q;
+  if(error){mensaje.textContent="No se pudieron consultar las publicaciones: "+error.message;return;}
+  if(!data?.length){mensaje.textContent="No hay publicaciones en este filtro.";lista.innerHTML='<div class="empty">Sin publicaciones.</div>';return;}
+  mensaje.textContent="Publicaciones encontradas: "+data.length;
+  data.forEach(c=>{
+    const card=document.createElement("article");card.className="request";
+    const retirada=c.status==="cancelled";
+    card.innerHTML='<span class="status '+(retirada?'suspended':'verified')+'">'+(retirada?'Retirada':'Publicada')+'</span>'+
+      '<h3>'+escaparHTML(c.origin_city)+' → '+escaparHTML(c.destination_city)+'</h3>'+
+      '<p class="small"><b>Tipo:</b> '+escaparHTML(c.cargo_type)+' · <b>Vehículo:</b> '+escaparHTML(c.vehicle_type)+'</p>'+
+      '<p class="small"><b>Fecha de cargue:</b> '+escaparHTML(c.loading_date||'Sin fecha')+' · <b>Pago:</b> '+dinero(Number(c.payment))+'</p>'+
+      '<p class="small"><b>ID publicación:</b> '+escaparHTML(c.id)+'</p>'+
+      '<p class="small"><b>Empresa:</b> '+escaparHTML(c.company_id)+'</p>'+
+      '<div class="actions"><button class="btn '+(retirada?'success':'danger')+' estadoCargaBtn" type="button">'+(retirada?'Restaurar publicación':'Retirar publicación')+'</button></div>'+
+      '<p class="small resultadoCargaAdmin" aria-live="polite"></p>';
+    lista.appendChild(card);
+    card.querySelector("button").addEventListener("click",async()=>{
+      const accion=retirada?"republish":"withdraw";
+      const motivo=prompt("Motivo para "+(retirada?"restaurar":"retirar")+" la publicación (mínimo 5 caracteres):");
+      if(motivo===null)return;
+      if(motivo.trim().length<5){alert("Escribe un motivo de al menos 5 caracteres.");return;}
+      if(!confirm("¿Confirmas "+(retirada?"restaurar":"retirar")+" esta publicación?"))return;
+      const b=card.querySelector("button"),out=card.querySelector(".resultadoCargaAdmin");
+      b.disabled=true;out.textContent="Procesando...";
+      const {error:rpcError}=await supabaseClient.rpc("admin_manage_load",{p_load_id:c.id,p_action:accion,p_reason:motivo.trim()});
+      if(rpcError){out.textContent="No se pudo completar la acción: "+rpcError.message;b.disabled=false;return;}
+      out.textContent="Acción completada.";
+      await cargarCargasAdmin();await cargarHistorialAdmin();await cargarCargasReales(usuarioActual);
+    });
+  });
+}
+
+async function cargarHistorialAdmin(){
+  const mensaje=$("mensajeHistorialAdmin"),lista=$("listaHistorialAdmin");
+  if(!usuarioActual||!esAdministrador){mensaje.textContent="No autorizado.";return;}
+  mensaje.textContent="Consultando historial...";lista.innerHTML="";
+  const {data,error}=await supabaseClient.from("admin_action_logs")
+    .select("action,target_id,reason,details,created_at")
+    .order("created_at",{ascending:false}).limit(100);
+  if(error){mensaje.textContent="No se pudo consultar el historial: "+error.message;return;}
+  if(!data?.length){mensaje.textContent="Todavía no hay acciones administrativas registradas.";return;}
+  mensaje.textContent="Últimas acciones: "+data.length;
+  lista.innerHTML=data.map(x=>'<div class="request" style="margin-top:8px"><b>'+escaparHTML(x.action)+'</b><p class="small">Objetivo: '+escaparHTML(x.target_id)+'</p><p class="small">Motivo: '+escaparHTML(x.reason||"No indicado")+'</p><p class="small">'+escaparHTML(new Date(x.created_at).toLocaleString("es-CO"))+'</p></div>').join("");
+}
+$("actualizarEmpresasAdmin").addEventListener("click",cargarEmpresasAdmin);
+$("actualizarCargasAdmin").addEventListener("click",cargarCargasAdmin);
+$("filtroCargasAdmin").addEventListener("change",cargarCargasAdmin);
+$("actualizarHistorialAdmin").addEventListener("click",cargarHistorialAdmin);
+
 /* CARGAS DE DEMOSTRACIÓN */
 const demo=[
 {o:"Bogotá",d:"Cúcuta",t:"General",p:6800000,f:"2026-11-12"},
@@ -679,7 +794,7 @@ document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{
   if(b.dataset.tab==="administracion"&&!esAdministrador) return;
   document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active",x===b));
   document.querySelectorAll(".view").forEach(x=>x.classList.toggle("hidden",x.id!==b.dataset.tab));
-  if(b.dataset.tab==="administracion") cargarSolicitudesAdmin();
+  if(b.dataset.tab==="administracion"){cargarSolicitudesAdmin();cargarEmpresasAdmin();cargarCargasAdmin();cargarHistorialAdmin();}
   if(b.dataset.tab==="empresa") cargarInteresadosEmpresa();
 });
 
