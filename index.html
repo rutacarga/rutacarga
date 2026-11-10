@@ -145,8 +145,8 @@ footer{text-align:center;padding:25px;color:var(--muted);font-size:12px}
 <h2>Publicar oportunidad (demo)</h2>
 <p class="small">Solo las empresas de transporte verificadas podrán publicar cargas reales en la plataforma definitiva.</p>
 <div class="formgrid">
-<div><label>Origen</label><input id="nOrigen" placeholder="Bogotá"></div>
-<div><label>Destino</label><input id="nDestino" placeholder="Cúcuta"></div>
+<div><label>Origen</label><input id="nOrigen" placeholder="Escribe vereda, municipio o ciudad" list="lugaresColombia"></div>
+<div><label>Destino</label><input id="nDestino" placeholder="Escribe vereda, municipio o ciudad" list="lugaresColombia"></div>
 <div><label>Tipo</label><select id="nTipo"><option>General</option><option>Contenedor</option><option>Granel</option><option>Refrigerada</option><option>Estibas</option></select></div>
 <div><label>Pago ofrecido</label><input id="nPago" type="number" placeholder="6500000"></div>
 <div><label>Fecha</label><input id="nFecha" type="date"></div>
@@ -232,5 +232,20 @@ alert("Guardado como demostración únicamente en este dispositivo. No se public
 };
 pintar();
 </script>
+  <datalist id="lugaresColombia">
+  <option value="Bogotá, Cundinamarca">
+  <option value="Medellín, Antioquia">
+  <option value="Cúcuta, Norte de Santander">
+  <option value="Bucaramanga, Santander">
+  <option value="Zipaquirá, Cundinamarca">
+  <option value="Duitama, Boyacá">
+  <option value="Tunja, Boyacá">
+  <option value="Yopal, Casanare">
+  <option value="Villavicencio, Meta">
+  <option value="Cali, Valle del Cauca">
+  <option value="Barranquilla, Atlántico">
+  <option value="Cartagena, Bolívar">
+  <option value="Santa Marta, Magdalena">
+  </datalist>
 </body>
 </html>
