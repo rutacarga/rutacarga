@@ -1230,7 +1230,7 @@ $("enviarEmpresa").onclick=async()=>{
 };
 
 function normalizarWhatsApp(valor){
-  let numero=String(valor||"").replace(/\\D/g,"");
+  let numero=String(valor||"").replace(/\D/g,"");
   if(numero.length===10) numero="57"+numero;
   if(numero.length<10||numero.length>15) return null;
   return numero;
@@ -1390,7 +1390,7 @@ async function cargarCargasReales(user){
   pintar();
 }
 
-$("cards").addEventListener("click",async(event)=>{
+document.addEventListener("click",async(event)=>{
   const boton=event.target.closest(".interesCargaBtn");
   if(!boton)return;
   const mensaje=boton.closest(".load").querySelector(".interesMensaje");
