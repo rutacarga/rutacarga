@@ -644,7 +644,7 @@ $("enviarVerificacionConductor").addEventListener("click",async()=>{
   let rutaArchivo=null;
   try{
     const nombreSeguro=archivo.name.normalize("NFD")
-      .replace(/[\\u0300-\\u036f]/g,"")
+      .replace(/[\u0300-\u036f]/g,"")
       .replace(/[^a-zA-Z0-9._-]/g,"_");
     rutaArchivo=usuarioActual.id+"/"+Date.now()+"_"+nombreSeguro;
 
