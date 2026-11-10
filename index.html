@@ -391,8 +391,7 @@ try {
     .from("profiles")
     .update({
       full_name: conductor,
-      city: ciudad,
-      updated_at: new Date().toISOString()
+      city: ciudad
     })
     .eq("id", usuarioActual.id);
 
@@ -419,8 +418,15 @@ try {
   if (vehiculos && vehiculos.length > 0) {
     const { error: actualizarVehiculoError } = await supabaseClient
       .from("vehicles")
-      .update(datosVehiculo)
-      .eq("id", vehiculos[0].id);
+      .update({
+        plate: placa,
+        configuration: config,
+        body_type: carroceria,
+        city: ciudad,
+        availability: "available"
+      })
+      .eq("id", vehiculos[0].id)
+      .eq("owner_id", usuarioActual.id);
 
     if (actualizarVehiculoError) throw new Error("Error actualizando el vehículo: " + actualizarVehiculoError.message);
   } else {
