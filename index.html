@@ -1,0 +1,236 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#102a43">
+<title>RUTA CARGA | La red nacional del hombre camión</title>
+<style>
+:root{--navy:#102a43;--blue:#1769aa;--bg:#f3f6fa;--ink:#172b4d;--muted:#61758a;--line:#dce5ee;--green:#13845b}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);font:15px Arial,sans-serif;color:var(--ink)}
+header{background:linear-gradient(120deg,#102a43,#1769aa);color:white;padding:25px 18px}
+.header{max-width:1050px;margin:auto}
+.brand{font-size:27px;font-weight:900;letter-spacing:1px}
+header p{margin:6px 0 0;color:#dbeafe}
+main{max-width:1050px;margin:auto;padding:18px}
+.notice{background:#fff7df;border:1px solid #f1d58b;border-radius:12px;padding:12px;margin-bottom:16px;color:#70551a;font-size:13px}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:15px}
+.tab{border:1px solid var(--line);background:white;padding:11px 14px;border-radius:9px;font-weight:bold;color:var(--ink);cursor:pointer}
+.tab.active{background:var(--navy);color:white}
+.panel{background:white;border:1px solid var(--line);border-radius:14px;padding:17px;margin-bottom:15px}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:11px}
+label{display:block;font-size:12px;font-weight:bold;color:var(--muted);margin-bottom:5px}
+input,select{width:100%;padding:11px;border:1px solid var(--line);border-radius:8px;background:white;font-size:14px}
+.actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:13px}
+.btn{border:0;background:var(--blue);color:white;padding:11px 15px;border-radius:8px;font-weight:bold;cursor:pointer}
+.btn.secondary{background:#e8f0f8;color:var(--navy)}
+h2{font-size:20px}
+.cards{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.load{background:white;border:1px solid var(--line);border-radius:12px;padding:15px}
+.route{font-size:18px;font-weight:800}
+.route span{color:var(--blue)}
+.meta{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0}
+.chip{font-size:11px;background:#eef4fa;padding:5px 8px;border-radius:20px}
+.price{font-size:22px;font-weight:900;color:var(--green);margin:8px 0}
+.small{font-size:12px;color:var(--muted);line-height:1.5}
+.hidden{display:none!important}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:15px}
+.stat{background:#f3f6fa;padding:13px;border-radius:10px}
+.stat b{display:block;font-size:20px;margin-top:5px}
+.empty{padding:22px;text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:10px}
+footer{text-align:center;padding:25px;color:var(--muted);font-size:12px}
+.modal{display:none;position:fixed;inset:0;background:#071827bb;align-items:center;justify-content:center;padding:15px}
+.modal.open{display:flex}
+.modalbox{background:white;border-radius:14px;padding:18px;width:min(550px,100%);max-height:90vh;overflow:auto}
+.formgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(max-width:700px){.grid{grid-template-columns:1fr 1fr}.cards{grid-template-columns:1fr}}
+@media(max-width:430px){.grid,.formgrid{grid-template-columns:1fr}.stats{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header>
+<div class="header">
+<div class="brand">🚛 RUTA CARGA</div>
+<p>La red nacional del hombre camión · Colombia</p>
+</div>
+</header>
+
+<main>
+<div class="notice"><b>Versión de demostración:</b> las cargas mostradas son ficticias. Esta versión todavía no recibe ofertas reales ni conecta usuarios.</div>
+
+<div class="tabs">
+<button class="tab active" data-tab="buscar">Buscar cargas</button>
+<button class="tab" data-tab="retorno">Carga de regreso</button>
+<button class="tab" data-tab="rentabilidad">Rentabilidad</button>
+<button class="tab" data-tab="perfil">Mi vehículo</button>
+</div>
+
+<section id="buscar" class="view">
+<div class="panel">
+<h2>Encuentra tu próxima carga</h2>
+<div class="grid">
+<div><label>Origen</label><select id="origen"><option value="">Todos</option><option>Bogotá</option><option>Medellín</option><option>Cúcuta</option><option>Bucaramanga</option><option>Cali</option><option>Barranquilla</option><option>Cartagena</option><option>Buenaventura</option></select></div>
+<div><label>Destino</label><select id="destino"><option value="">Todos</option><option>Bogotá</option><option>Medellín</option><option>Cúcuta</option><option>Bucaramanga</option><option>Cali</option><option>Barranquilla</option><option>Cartagena</option><option>Buenaventura</option></select></div>
+<div><label>Tipo de carga</label><select id="tipo"><option value="">Todas</option><option>General</option><option>Contenedor</option><option>Granel</option><option>Refrigerada</option><option>Estibas</option></select></div>
+<div><label>Fecha de cargue</label><input id="fecha" type="date"></div>
+</div>
+<div class="actions">
+<button class="btn" id="filtrar">Buscar cargas</button>
+<button class="btn secondary" id="limpiar">Limpiar</button>
+<button class="btn secondary" id="abrirModal">＋ Publicar (demo)</button>
+</div>
+</div>
+<div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
+<h2>Oportunidades disponibles</h2><span class="small" id="contador"></span>
+</div>
+<div class="cards" id="cards"></div>
+</section>
+
+<section id="retorno" class="view hidden">
+<div class="panel">
+<h2>Busca carga para tu regreso</h2>
+<p class="small">Encuentra oportunidades para evitar regresar con el tractocamión vacío.</p>
+<div class="grid">
+<div><label>Estoy en</label><select id="retOrigen"><option>Cúcuta</option><option>Bogotá</option><option>Medellín</option><option>Bucaramanga</option><option>Cali</option><option>Barranquilla</option></select></div>
+<div><label>Quiero regresar a</label><select id="retDestino"><option>Bogotá</option><option>Cúcuta</option><option>Medellín</option><option>Bucaramanga</option><option>Cali</option><option>Barranquilla</option></select></div>
+</div>
+<button class="btn" id="buscarRetorno">Buscar regreso</button>
+</div>
+<div class="cards" id="retornoCards"></div>
+</section>
+
+<section id="rentabilidad" class="view hidden">
+<div class="panel">
+<h2>Calcula la rentabilidad de tu viaje</h2>
+<p class="small">Ingresa los gastos estimados para conocer el resultado del recorrido.</p>
+<div class="grid">
+<div><label>Pago del viaje (COP)</label><input id="pago" type="number" value="8500000"></div>
+<div><label>Combustible (COP)</label><input id="comb" type="number" value="2600000"></div>
+<div><label>Peajes (COP)</label><input id="peajes" type="number" value="650000"></div>
+<div><label>Otros gastos (COP)</label><input id="otros" type="number" value="450000"></div>
+</div>
+<button class="btn" id="calcular">Calcular</button>
+<div class="stats">
+<div class="stat">Costos totales<b id="costos">$3.700.000</b></div>
+<div class="stat">Resultado estimado<b id="utilidad">$4.800.000</b></div>
+<div class="stat">Margen<b id="margen">56,5%</b></div>
+</div>
+</div>
+</section>
+
+<section id="perfil" class="view hidden">
+<div class="panel">
+<h2>Mi tractocamión</h2>
+<p class="small">Registra los datos básicos de tu vehículo.</p>
+<div class="grid">
+<div><label>Nombre del conductor</label><input id="conductor" placeholder="Nombre completo"></div>
+<div><label>Placa</label><input id="placa" placeholder="ABC123" maxlength="6"></div>
+<div><label>Configuración</label><select id="config"><option>2S1</option><option>2S2</option><option>3S2</option><option>3S3</option><option>Otra</option></select></div>
+<div><label>Carrocería</label><select id="carroceria"><option>Estacas</option><option>Furgón</option><option>Planchón</option><option>Portacontenedor</option><option>Volco</option><option>Tanque</option><option>Refrigerada</option></select></div>
+<div><label>Ciudad habitual</label><select id="ciudad"><option>Cúcuta</option><option>Bogotá</option><option>Medellín</option><option>Bucaramanga</option><option>Cali</option><option>Barranquilla</option></select></div>
+<div><label>Tipo de usuario</label><select id="rol"><option>Propietario y conductor</option><option>Propietario</option><option>Conductor</option></select></div>
+</div>
+<button class="btn" id="guardarPerfil">Guardar perfil</button>
+<p class="small" id="mensajePerfil"></p>
+</div>
+</section>
+</main>
+
+<footer>RUTA CARGA · La red nacional del hombre camión · Colombia</footer>
+
+<div class="modal" id="modal">
+<div class="modalbox">
+<h2>Publicar oportunidad (demo)</h2>
+<p class="small">Solo las empresas de transporte verificadas podrán publicar cargas reales en la plataforma definitiva.</p>
+<div class="formgrid">
+<div><label>Origen</label><input id="nOrigen" placeholder="Bogotá"></div>
+<div><label>Destino</label><input id="nDestino" placeholder="Cúcuta"></div>
+<div><label>Tipo</label><select id="nTipo"><option>General</option><option>Contenedor</option><option>Granel</option><option>Refrigerada</option><option>Estibas</option></select></div>
+<div><label>Pago ofrecido</label><input id="nPago" type="number" placeholder="6500000"></div>
+<div><label>Fecha</label><input id="nFecha" type="date"></div>
+<div><label>Contacto</label><input id="nContacto" placeholder="Teléfono"></div>
+</div>
+<div class="actions">
+<button class="btn" id="guardarCarga">Guardar demo</button>
+<button class="btn secondary" id="cerrarModal">Cancelar</button>
+</div>
+</div>
+</div>
+
+<script>
+const demo=[
+{o:"Bogotá",d:"Cúcuta",t:"General",p:6800000,f:"2026-11-12"},
+{o:"Medellín",d:"Bogotá",t:"Contenedor",p:5200000,f:"2026-11-13"},
+{o:"Cali",d:"Bucaramanga",t:"Estibas",p:6100000,f:"2026-11-14"},
+{o:"Cartagena",d:"Bogotá",t:"Refrigerada",p:7900000,f:"2026-11-15"},
+{o:"Cúcuta",d:"Bogotá",t:"General",p:6400000,f:"2026-11-16"},
+{o:"Buenaventura",d:"Medellín",t:"Contenedor",p:5700000,f:"2026-11-17"}
+];
+let personal=[];
+const todas=()=>[...personal,...demo];
+const dinero=n=>new Intl.NumberFormat("es-CO",{style:"currency",currency:"COP",maximumFractionDigits:0}).format(n||0);
+
+function tarjeta(x){
+return `<article class="load">
+<div class="route">${x.o} <span>→</span> ${x.d}</div>
+<div class="meta"><span class="chip">${x.t}</span><span class="chip">Tractocamión</span><span class="chip">Cargue: ${x.f||"Por confirmar"}</span></div>
+<div class="price">${dinero(x.p)}</div>
+<p class="small">Publicación ficticia de demostración. Contacto no disponible.</p>
+<button class="btn secondary" onclick="alert('Esta función estará disponible cuando conectemos la plataforma y verifiquemos las empresas.')">Ver contacto</button>
+</article>`;
+}
+function pintar(lista=todas()){
+document.getElementById("cards").innerHTML=lista.length?lista.map(tarjeta).join(""):'<div class="empty">No encontramos oportunidades con esos filtros.</div>';
+document.getElementById("contador").textContent=lista.length+" publicaciones demo";
+}
+document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{
+document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active",x===b));
+document.querySelectorAll(".view").forEach(x=>x.classList.toggle("hidden",x.id!==b.dataset.tab));
+});
+document.getElementById("filtrar").onclick=()=>{
+let o=document.getElementById("origen").value,d=document.getElementById("destino").value,t=document.getElementById("tipo").value,f=document.getElementById("fecha").value;
+pintar(todas().filter(x=>(!o||x.o===o)&&(!d||x.d===d)&&(!t||x.t===t)&&(!f||x.f===f)));
+};
+document.getElementById("limpiar").onclick=()=>{
+["origen","destino","tipo","fecha"].forEach(id=>document.getElementById(id).value="");
+pintar();
+};
+document.getElementById("buscarRetorno").onclick=()=>{
+let o=document.getElementById("retOrigen").value,d=document.getElementById("retDestino").value;
+let encontrados=todas().filter(x=>x.o===o&&x.d===d);
+document.getElementById("retornoCards").innerHTML=encontrados.length?encontrados.map(tarjeta).join(""):'<div class="empty">No hay cargas demo para esta ruta. En la versión real se consultarán las oportunidades publicadas.</div>';
+};
+document.getElementById("calcular").onclick=()=>{
+let p=Number(document.getElementById("pago").value)||0;
+let c=(Number(document.getElementById("comb").value)||0)+(Number(document.getElementById("peajes").value)||0)+(Number(document.getElementById("otros").value)||0);
+let u=p-c;
+document.getElementById("costos").textContent=dinero(c);
+document.getElementById("utilidad").textContent=dinero(u);
+document.getElementById("margen").textContent=p?(u/p*100).toFixed(1).replace(".",",")+"%":"—";
+};
+document.getElementById("guardarPerfil").onclick=()=>{
+let p={};
+["conductor","placa","config","carroceria","ciudad","rol"].forEach(id=>p[id]=document.getElementById(id).value);
+localStorage.setItem("ruta_carga_perfil",JSON.stringify(p));
+document.getElementById("mensajePerfil").textContent="Perfil guardado en este dispositivo.";
+};
+try{
+let p=JSON.parse(localStorage.getItem("ruta_carga_perfil")||"null");
+if(p)Object.keys(p).forEach(k=>{let e=document.getElementById(k);if(e)e.value=p[k];});
+}catch(e){}
+document.getElementById("abrirModal").onclick=()=>document.getElementById("modal").classList.add("open");
+document.getElementById("cerrarModal").onclick=()=>document.getElementById("modal").classList.remove("open");
+document.getElementById("guardarCarga").onclick=()=>{
+let o=document.getElementById("nOrigen").value.trim(),d=document.getElementById("nDestino").value.trim(),p=Number(document.getElementById("nPago").value);
+if(!o||!d||!p){alert("Completa origen, destino y pago ofrecido.");return;}
+personal.unshift({o,d,p,t:document.getElementById("nTipo").value,f:document.getElementById("nFecha").value});
+document.getElementById("modal").classList.remove("open");
+pintar();
+alert("Guardado como demostración únicamente en este dispositivo. No se publicó para otros usuarios.");
+};
+pintar();
+</script>
+</body>
+</html>
