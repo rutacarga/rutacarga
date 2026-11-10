@@ -60,6 +60,15 @@ footer{text-align:center;padding:25px;color:var(--muted);font-size:12px}
 </header>
 
 <main>
+<section class="panel" id="acceso">
+<h2>Bienvenido a RUTA CARGA</h2>
+<p class="small">Accede gratis con tu cuenta de Google para utilizar la plataforma.</p>
+<button class="btn" id="googleLogin" type="button">Continuar con Google</button>
+<button class="btn secondary hidden" id="googleLogout" type="button">Cerrar sesión</button>
+<p class="small" id="estadoAcceso" aria-live="polite">Comprueba tu sesión para continuar.</p>
+</section>
+
+<div id="contenidoApp" class="hidden">
 <div class="notice"><b>Versión de demostración:</b> las cargas mostradas son ficticias. Esta versión todavía no recibe ofertas reales ni conecta usuarios.</div>
 
 <div class="tabs">
@@ -138,6 +147,7 @@ footer{text-align:center;padding:25px;color:var(--muted);font-size:12px}
 <p class="small" id="mensajePerfil"></p>
 </div>
 </section>
+</div>
 </main>
 
 <footer>RUTA CARGA · La red nacional del hombre camión · Colombia</footer>
@@ -161,7 +171,53 @@ footer{text-align:center;padding:25px;color:var(--muted);font-size:12px}
 </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
+const SUPABASE_URL = "https://hnnjdtisekgacydcsvzd.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_bVkpz6cXQ3d9BxyMCnwHEA_pYOHjiyu";
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const contenidoApp = document.getElementById("contenidoApp");
+const googleLogin = document.getElementById("googleLogin");
+const googleLogout = document.getElementById("googleLogout");
+const estadoAcceso = document.getElementById("estadoAcceso");
+
+googleLogin.addEventListener("click", async () => {
+  estadoAcceso.textContent = "Abriendo Google...";
+  const { error } = await supabaseClient.auth.signInWithOAuth({
+    provider: "google",
+    options: { redirectTo: "https://rutacarga.com.co" }
+  });
+  if (error) estadoAcceso.textContent = "No se pudo iniciar sesión: " + error.message;
+});
+
+googleLogout.addEventListener("click", async () => {
+  const { error } = await supabaseClient.auth.signOut();
+  if (error) estadoAcceso.textContent = "No se pudo cerrar sesión: " + error.message;
+});
+
+async function mostrarSesion() {
+  const { data, error } = await supabaseClient.auth.getUser();
+  if (error) {
+    estadoAcceso.textContent = "No pudimos comprobar tu sesión. Intenta recargar la página.";
+    contenidoApp.classList.add("hidden");
+    return;
+  }
+  if (data.user) {
+    estadoAcceso.textContent = "Sesión iniciada: " + (data.user.email || "cuenta Google");
+    googleLogin.classList.add("hidden");
+    googleLogout.classList.remove("hidden");
+    contenidoApp.classList.remove("hidden");
+  } else {
+    estadoAcceso.textContent = "Inicia sesión con Google para acceder a RUTA CARGA.";
+    googleLogin.classList.remove("hidden");
+    googleLogout.classList.add("hidden");
+    contenidoApp.classList.add("hidden");
+  }
+}
+supabaseClient.auth.onAuthStateChange(() => { mostrarSesion(); });
+mostrarSesion();
+
 const demo=[
 {o:"Bogotá",d:"Cúcuta",t:"General",p:6800000,f:"2026-11-12"},
 {o:"Medellín",d:"Bogotá",t:"Contenedor",p:5200000,f:"2026-11-13"},
@@ -175,8 +231,6 @@ let personal=[];
 const todas=()=>[...personal,...demo];
 const dinero=n=>new Intl.NumberFormat("es-CO",{style:"currency",currency:"COP",maximumFractionDigits:0}).format(n||0);
 
-// Compara texto sin distinguir mayúsculas ni tildes.
-// Permite escribir nombres parciales de lugares.
 function normalizar(texto){
 return String(texto||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().trim();
 }
@@ -209,13 +263,7 @@ let o=document.getElementById("origen").value;
 let d=document.getElementById("destino").value;
 let t=document.getElementById("tipo").value;
 let f=document.getElementById("fecha").value;
-
-pintar(todas().filter(x=>
-coincide(x.o,o)&&
-coincide(x.d,d)&&
-(!t||x.t===t)&&
-(!f||x.f===f)
-));
+pintar(todas().filter(x=>coincide(x.o,o)&&coincide(x.d,d)&&(!t||x.t===t)&&(!f||x.f===f)));
 };
 
 document.getElementById("limpiar").onclick=()=>{
@@ -226,19 +274,14 @@ pintar();
 document.getElementById("buscarRetorno").onclick=()=>{
 let o=document.getElementById("retOrigen").value;
 let d=document.getElementById("retDestino").value;
-
 let encontrados=todas().filter(x=>coincide(x.o,o)&&coincide(x.d,d));
-
-document.getElementById("retornoCards").innerHTML=encontrados.length?
-encontrados.map(tarjeta).join(""):
-'<div class="empty">No hay cargas demo para esta ruta. En la versión real se consultarán las oportunidades publicadas.</div>';
+document.getElementById("retornoCards").innerHTML=encontrados.length?encontrados.map(tarjeta).join(""):'<div class="empty">No hay cargas demo para esta ruta. En la versión real se consultarán las oportunidades publicadas.</div>';
 };
 
 document.getElementById("calcular").onclick=()=>{
 let p=Number(document.getElementById("pago").value)||0;
 let c=(Number(document.getElementById("comb").value)||0)+(Number(document.getElementById("peajes").value)||0)+(Number(document.getElementById("otros").value)||0);
 let u=p-c;
-
 document.getElementById("costos").textContent=dinero(c);
 document.getElementById("utilidad").textContent=dinero(u);
 document.getElementById("margen").textContent=p?(u/p*100).toFixed(1).replace(".",",")+"%":"—";
@@ -263,18 +306,8 @@ document.getElementById("guardarCarga").onclick=()=>{
 let o=document.getElementById("nOrigen").value.trim();
 let d=document.getElementById("nDestino").value.trim();
 let p=Number(document.getElementById("nPago").value);
-
-if(!o||!d||!p){
-alert("Completa origen, destino y pago ofrecido.");
-return;
-}
-
-personal.unshift({
-o,d,p,
-t:document.getElementById("nTipo").value,
-f:document.getElementById("nFecha").value
-});
-
+if(!o||!d||!p){alert("Completa origen, destino y pago ofrecido.");return;}
+personal.unshift({o,d,p,t:document.getElementById("nTipo").value,f:document.getElementById("nFecha").value});
 document.getElementById("modal").classList.remove("open");
 pintar();
 alert("Guardado como demostración únicamente en este dispositivo. No se publicó para otros usuarios.");
