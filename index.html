@@ -80,6 +80,14 @@ textarea{min-height:75px;resize:vertical}
 <div id="contenidoApp" class="hidden">
 <div class="notice"><b>Información:</b> las cargas marcadas como demostración son ficticias. Las cargas reales serán publicadas por empresas transportadoras verificadas.</div>
 
+<section class="panel" id="panelRegistroEmpresa">
+<h2>¿Tienes una empresa transportadora?</h2>
+<p class="small">Puedes solicitar el registro con tu cuenta actual de Google. <b>No necesitas crear otra cuenta ni cambiar previamente tu perfil a “Empresa”.</b> Completa la razón social, el NIT y adjunta un documento oficial de soporte. RUTA CARGA revisará la solicitud y, si la aprueba, habilitará la opción para publicar cargas reales.</p>
+<div class="actions">
+<button class="btn" id="abrirRegistroEmpresa" type="button">Solicitar registro de empresa</button>
+</div>
+</section>
+
 <div class="tabs">
 <button class="tab active" data-tab="buscar">Buscar cargas</button>
 <button class="tab" data-tab="retorno">Carga de regreso</button>
@@ -1106,6 +1114,8 @@ function pintar(lista=todas()){
   const reales=lista.filter(x=>x.real).length;
   $("contador").textContent=reales+" reales · "+(lista.length-reales)+" demo";
 }
+
+$("abrirRegistroEmpresa").onclick=()=>document.querySelector('.tab[data-tab="empresa"]').click();
 
 document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{
   if(b.dataset.tab==="administracion"&&!esAdministrador) return;
