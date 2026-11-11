@@ -347,6 +347,7 @@ let solicitudEmpresaExistente=null;
 let rolUsuario=null;
 let esAdministrador=false;
 let empresaVerificada=false;
+let puedePublicarCargas=false;
 let conductorVerificado=false;
 let cargasReales=[];
 
@@ -713,6 +714,7 @@ async function comprobarAdministrador(user){
     rolUsuario=null;
     esAdministrador=false;
     empresaVerificada=false;
+    puedePublicarCargas=false;
     $("tabAdmin").classList.add("hidden");
     $("tabPublicar").classList.add("hidden");
     $("tabVerificacionConductor").classList.add("hidden");
@@ -739,12 +741,19 @@ async function comprobarAdministrador(user){
       || (data.role==="company"&&verificacionEmpresa==="verified")
     );
 
+  // Solo una cuenta empresarial verificada puede crear o editar cargas reales.
+  // La cuenta administradora conserva sus funciones de supervisión.
+  puedePublicarCargas=!!data
+    && data.role==="company"
+    && data.verification_status==="verified"
+    && verificacionEmpresa==="verified";
+
   // Las cuentas ya verificadas no deben seguir viendo el formulario de registro.
   $("panelRegistroEmpresa").classList.toggle("hidden",empresaVerificada);
 
   const puedeVerificarConductor=["driver","owner","owner_driver"].includes(rolUsuario);
   $("tabAdmin").classList.toggle("hidden",!esAdministrador);
-  $("tabPublicar").classList.toggle("hidden",!empresaVerificada);
+  $("tabPublicar").classList.toggle("hidden",!puedePublicarCargas);
   $("tabVerificacionConductor").classList.toggle("hidden",!puedeVerificarConductor);
 
   if(esAdministrador){
@@ -786,6 +795,7 @@ async function mostrarSesion(){
     rolUsuario=null;
     esAdministrador=false;
     empresaVerificada=false;
+    puedePublicarCargas=false;
     conductorVerificado=false;
     cargasReales=[];
     $("tabAdmin").classList.add("hidden");
@@ -1482,7 +1492,7 @@ document.addEventListener("click",async(event)=>{
 
 $("guardarCargaReal").onclick=async()=>{
   const boton=$("guardarCargaReal"),mensaje=$("mensajeCargaReal");
-  if(!usuarioActual||!empresaVerificada){mensaje.textContent="Solo las empresas verificadas pueden publicar cargas.";return;}
+  if(!usuarioActual||!puedePublicarCargas){mensaje.textContent="Solo la cuenta de empresa verificada puede publicar cargas.";return;}
   const o=$("cargaOrigen").value.trim(),d=$("cargaDestino").value.trim(),f=$("cargaFecha").value,p=Number($("cargaPago").value);
   const t=$("cargaTipo").value,v=$("cargaVehiculo").value,description=$("cargaDescripcion").value.trim();
   if(!o||!d||!f||!p||p<=0){mensaje.textContent="Completa origen, destino, fecha y pago válido.";return;}
