@@ -94,7 +94,8 @@ textarea{min-height:75px;resize:vertical}
 <button class="tab" data-tab="rentabilidad">Rentabilidad</button>
 <button class="tab" data-tab="perfil">Mi vehículo</button>
 <button class="tab hidden" id="tabVerificacionConductor" data-tab="verificacionConductor">Verificar conductor</button>
-<button class="tab" data-tab="empresa">Empresa transportadora</button>
+<button class="tab hidden" id="tabMisSolicitudes" data-tab="misSolicitudes">Mis solicitudes</button>
+<button class="tab" id="tabEmpresa" data-tab="empresa">Empresa transportadora</button>
 <button class="tab hidden" id="tabPublicar" data-tab="publicar">Publicar cargas</button>
 <button class="tab hidden" id="tabMisPublicaciones" data-tab="misPublicaciones">Mis publicaciones</button>
 <button class="tab hidden" id="tabAdmin" data-tab="administracion">Administración</button>
@@ -285,8 +286,34 @@ textarea{min-height:75px;resize:vertical}
 </div>
 </section>
 
+<!-- SOLICITUDES DEL CONDUCTOR -->
+<section id="misSolicitudes" class="view hidden">
+<div class="panel">
+<h2>Mis solicitudes de carga</h2>
+<p class="small">Consulta los intereses que has enviado y el estado de cada solicitud. Solo tú puedes ver tus solicitudes.</p>
+<div class="actions"><button class="btn secondary" id="actualizarMisSolicitudes" type="button">Actualizar solicitudes</button></div>
+<p class="small" id="mensajeMisSolicitudes" aria-live="polite">Consultando tus solicitudes...</p>
+<div id="listaMisSolicitudes" class="cards"></div>
+</div>
+</section>
+
 <!-- PANEL DE ADMINISTRACIÓN -->
 <section id="administracion" class="view hidden">
+<div class="panel">
+<h2>Directorio general de usuarios</h2>
+<p class="small">Vista global de perfiles, roles, estados de verificación y vehículos registrados.</p>
+<div class="actions"><button class="btn secondary" id="actualizarUsuariosAdmin" type="button">Actualizar usuarios</button></div>
+<p class="small" id="mensajeUsuariosAdmin" aria-live="polite">Consultando usuarios...</p>
+<div id="listaUsuariosAdmin" class="cards"></div>
+</div>
+<div class="panel">
+<h2>Todas las solicitudes de carga</h2>
+<p class="small">Vista administrativa de los intereses enviados por conductores y propietarios, sin limitarse a una empresa.</p>
+<div class="actions"><button class="btn secondary" id="actualizarInteresesAdmin" type="button">Actualizar solicitudes</button>
+<select id="filtroInteresesAdmin" style="max-width:220px"><option value="all">Todos los estados</option><option value="pending">Pendientes</option><option value="contacted">Contactados</option><option value="closed">Cerrados</option></select></div>
+<p class="small" id="mensajeInteresesAdmin" aria-live="polite">Consultando solicitudes...</p>
+<div id="listaInteresesAdmin" class="cards"></div>
+</div>
 <div class="panel">
 <h2>Verificación de conductores</h2>
 <p class="small">Revisa los documentos de los conductores y aprueba o rechaza las solicitudes. Solo administradores verificados pueden realizar estas acciones.</p>
@@ -330,7 +357,7 @@ textarea{min-height:75px;resize:vertical}
 <h2>Gestión de publicaciones</h2>
 <p class="small">Consulta todas las cargas, incluidas las retiradas. Puedes retirar una publicación o restaurarla. Las acciones quedan registradas.</p>
 <div class="actions"><button class="btn secondary" id="actualizarCargasAdmin" type="button">Actualizar publicaciones</button>
-<select id="filtroCargasAdmin" style="max-width:220px"><option value="all">Todos los estados</option><option value="published">Publicadas</option><option value="cancelled">Retiradas</option></select></div>
+<select id="filtroCargasAdmin" style="max-width:220px"><option value="all">Todos los estados</option><option value="published">Publicadas</option><option value="closed">Cerradas</option><option value="completed">Completadas</option><option value="cancelled">Retiradas</option></select></div>
 <p class="small" id="mensajeCargasAdmin" aria-live="polite">Consulta las publicaciones.</p>
 <div class="cards" id="listaCargasAdmin"></div>
 </div>
@@ -793,8 +820,39 @@ async function comprobarAdministrador(user){
   $("tabMisPublicaciones").classList.toggle("hidden",!puedePublicarCargas);
   $("tabVerificacionConductor").classList.toggle("hidden",!puedeVerificarConductor);
 
+  configurarPanelPorRol();
   if(esAdministrador){
-    $("mensajeAdmin").textContent="Sesión de administrador reconocida.";
+    $("mensajeAdmin").textContent="Sesión de administrador reconocida. Tienes acceso global de lectura y administración.";
+  }
+}
+
+function configurarPanelPorRol(){
+  const esConductor=["driver","owner","owner_driver"].includes(rolUsuario);
+  const esEmpresa=rolUsuario==="company";
+  const tabs={
+    buscar:esAdministrador||esConductor,
+    retorno:esAdministrador,
+    rentabilidad:esAdministrador,
+    perfil:esAdministrador||esConductor,
+    verificacionConductor:esAdministrador||esConductor,
+    misSolicitudes:esConductor,
+    empresa:esAdministrador||esEmpresa,
+    publicar:esEmpresa&&puedePublicarCargas,
+    misPublicaciones:esEmpresa&&puedePublicarCargas,
+    administracion:esAdministrador
+  };
+  document.querySelectorAll(".tab").forEach(tab=>{
+    const key=tab.dataset.tab;
+    tab.classList.toggle("hidden",!tabs[key]);
+  });
+  $("panelRegistroEmpresa").classList.toggle("hidden",!esEmpresa||empresaVerificada);
+  $("abrirModal").classList.toggle("hidden",esConductor||esEmpresa);
+  if(esConductor)document.querySelector(".notice")?.classList.add("hidden");
+  const activa=document.querySelector(".tab.active");
+  if(!activa||activa.classList.contains("hidden")){
+    const preferida=esAdministrador?"administracion":esEmpresa?"empresa":"buscar";
+    const boton=document.querySelector('.tab[data-tab="'+preferida+'"]');
+    if(boton&&!boton.classList.contains("hidden"))boton.click();
   }
 }
 
@@ -823,9 +881,15 @@ async function mostrarSesion(){
       await cargarSolicitudConductor(data.user);
     }
 
+    configurarPanelPorRol();
     if(esAdministrador){
       await cargarSolicitudesAdmin();
       await cargarSolicitudesConductoresAdmin();
+      await cargarEmpresasAdmin();
+      await cargarCargasAdmin();
+      await cargarHistorialAdmin();
+      await cargarUsuariosAdmin();
+      await cargarSolicitudesInteresAdmin();
     }
   }else{
     usuarioActual=null;
@@ -837,7 +901,10 @@ async function mostrarSesion(){
     cargasReales=[];
     $("tabAdmin").classList.add("hidden");
     $("tabPublicar").classList.add("hidden");
+    $("tabMisPublicaciones").classList.add("hidden");
+    $("tabMisSolicitudes").classList.add("hidden");
     $("tabVerificacionConductor").classList.add("hidden");
+    $("tabEmpresa").classList.add("hidden");
     estadoAcceso.textContent="Inicia sesión con Google para acceder a RUTA CARGA.";
     googleLogin.classList.remove("hidden");
     googleLogin.disabled=false;
@@ -1067,8 +1134,9 @@ async function cargarCargasAdmin(){
   data.forEach(c=>{
     const card=document.createElement("article");card.className="request";
     const retirada=c.status==="cancelled";
+    const etiquetaEstado={published:"Publicada",closed:"Cerrada",completed:"Completada",cancelled:"Retirada"}[c.status]||c.status;
     const protegida=c.id==="3001d24d-f0e0-4862-b256-a02c2a128111";
-    card.innerHTML='<span class="status '+(retirada?'suspended':'verified')+'">'+(retirada?'Retirada':'Publicada')+'</span>'+
+    card.innerHTML='<span class="status '+(retirada?'suspended':c.status==="published"?'verified':'')+'">'+escaparHTML(etiquetaEstado)+'</span>'+
       (protegida?'<span class="status verified">Publicación protegida</span>':'')+
       '<h3>'+escaparHTML(c.origin_city)+' → '+escaparHTML(c.destination_city)+'</h3>'+
       '<p class="small"><b>Tipo:</b> '+escaparHTML(c.cargo_type)+' · <b>Vehículo:</b> '+escaparHTML(c.vehicle_type)+'</p>'+
@@ -1095,6 +1163,98 @@ async function cargarCargasAdmin(){
   });
 }
 
+async function cargarUsuariosAdmin(){
+  const mensaje=$("mensajeUsuariosAdmin"),lista=$("listaUsuariosAdmin");
+  if(!usuarioActual||!esAdministrador){mensaje.textContent="No autorizado.";lista.innerHTML="";return;}
+  mensaje.textContent="Consultando directorio de usuarios...";lista.innerHTML="";
+  const {data:perfiles,error}=await supabaseClient.from("profiles")
+    .select("id,full_name,phone_whatsapp,city,role,verification_status,created_at")
+    .order("created_at",{ascending:false});
+  if(error){mensaje.textContent="No se pudo consultar el directorio: "+error.message;return;}
+  const ids=(perfiles||[]).map(x=>x.id);
+  let vehiculos=[];
+  if(ids.length){
+    const {data,error:errorVehiculos}=await supabaseClient.from("vehicles")
+      .select("owner_id,plate,configuration,body_type,city,availability").in("owner_id",ids);
+    if(errorVehiculos){mensaje.textContent="Usuarios consultados; no se pudieron consultar los vehículos: "+errorVehiculos.message;return;}
+    vehiculos=data||[];
+  }
+  const mapa=new Map(vehiculos.map(v=>[v.owner_id,v]));
+  const roles={admin:"Administrador",company:"Empresa de transporte",driver:"Conductor",owner:"Propietario",owner_driver:"Propietario y conductor"};
+  const estados={verified:"Verificado",pending:"Pendiente",rejected:"Rechazado",suspended:"Suspendido",not_submitted:"Sin enviar"};
+  mensaje.textContent="Usuarios registrados: "+(perfiles||[]).length;
+  if(!perfiles?.length){lista.innerHTML='<div class="empty">No hay usuarios registrados.</div>';return;}
+  perfiles.forEach(p=>{
+    const v=mapa.get(p.id),card=document.createElement("article");card.className="request";
+    card.innerHTML='<h3>'+escaparHTML(p.full_name||"Usuario sin nombre")+'</h3>'+
+      '<p class="small"><b>Rol:</b> '+escaparHTML(roles[p.role]||p.role)+'</p>'+
+      '<p class="small"><b>Verificación:</b> '+escaparHTML(estados[p.verification_status]||p.verification_status)+'</p>'+
+      '<p class="small"><b>Ciudad:</b> '+escaparHTML(p.city||"No indicada")+' · <b>WhatsApp:</b> '+escaparHTML(p.phone_whatsapp||"No registrado")+'</p>'+
+      (v?'<p class="small"><b>Vehículo:</b> '+escaparHTML(v.plate)+' · '+escaparHTML(v.configuration)+' · '+escaparHTML(v.body_type)+' · '+escaparHTML(v.city||"")+'</p>':'<p class="small">Sin vehículo registrado.</p>')+
+      '<p class="small">Registro: '+escaparHTML(new Date(p.created_at).toLocaleString("es-CO"))+'</p>';
+    lista.appendChild(card);
+  });
+}
+
+async function cargarSolicitudesInteresAdmin(){
+  const mensaje=$("mensajeInteresesAdmin"),lista=$("listaInteresesAdmin");
+  if(!usuarioActual||!esAdministrador){mensaje.textContent="No autorizado.";lista.innerHTML="";return;}
+  mensaje.textContent="Consultando todas las solicitudes...";lista.innerHTML="";
+  let consulta=supabaseClient.from("load_interest_requests")
+    .select("id,load_id,company_id,transporter_id,transporter_name,transporter_whatsapp,status,created_at")
+    .order("created_at",{ascending:false}).limit(500);
+  const filtro=$("filtroInteresesAdmin").value;
+  if(filtro!=="all")consulta=consulta.eq("status",filtro);
+  const {data,error}=await consulta;
+  if(error){mensaje.textContent="No se pudieron consultar las solicitudes: "+error.message;return;}
+  if(!data?.length){mensaje.textContent="No hay solicitudes en este filtro.";lista.innerHTML='<div class="empty">Sin solicitudes.</div>';return;}
+  const companyIds=[...new Set(data.map(x=>x.company_id))],loadIds=[...new Set(data.map(x=>x.load_id))];
+  const [{data:companies,error:companyError},{data:loads,error:loadsError}]=await Promise.all([
+    supabaseClient.from("profiles").select("id,full_name").in("id",companyIds),
+    supabaseClient.from("company_loads").select("id,origin_city,destination_city,status").in("id",loadIds)
+  ]);
+  if(companyError||loadsError){mensaje.textContent="Solicitudes consultadas, pero faltan datos relacionados: "+(companyError?.message||loadsError?.message);return;}
+  const companyMap=new Map((companies||[]).map(x=>[x.id,x.full_name])),loadMap=new Map((loads||[]).map(x=>[x.id,x]));
+  const estados={pending:"Pendiente",contacted:"Contactado",closed:"Cerrado"};
+  mensaje.textContent="Solicitudes encontradas: "+data.length+" (máximo 500 por consulta).";
+  data.forEach(x=>{
+    const carga=loadMap.get(x.load_id),card=document.createElement("article");card.className="request";
+    card.innerHTML='<span class="status">'+escaparHTML(estados[x.status]||x.status)+'</span>'+
+      '<h3>'+(carga?escaparHTML(carga.origin_city)+' → '+escaparHTML(carga.destination_city):"Carga no disponible")+'</h3>'+
+      '<p class="small"><b>Empresa:</b> '+escaparHTML(companyMap.get(x.company_id)||"Empresa")+'</p>'+
+      '<p class="small"><b>Transportador:</b> '+escaparHTML(x.transporter_name)+'</p>'+
+      '<p class="small"><b>WhatsApp:</b> '+escaparHTML(x.transporter_whatsapp)+'</p>'+
+      '<p class="small"><b>Estado de la carga:</b> '+escaparHTML(carga?.status||"No disponible")+'</p>'+
+      '<p class="small"><b>Solicitud:</b> '+escaparHTML(new Date(x.created_at).toLocaleString("es-CO"))+'</p>';
+    lista.appendChild(card);
+  });
+}
+
+async function cargarMisSolicitudes(){
+  const mensaje=$("mensajeMisSolicitudes"),lista=$("listaMisSolicitudes");
+  if(!usuarioActual||!["driver","owner","owner_driver"].includes(rolUsuario)){mensaje.textContent="Esta sección es exclusiva para conductores y propietarios.";lista.innerHTML="";return;}
+  mensaje.textContent="Consultando tus solicitudes...";lista.innerHTML="";
+  const {data,error}=await supabaseClient.from("load_interest_requests")
+    .select("id,load_id,status,created_at")
+    .eq("transporter_id",usuarioActual.id).order("created_at",{ascending:false});
+  if(error){mensaje.textContent="No se pudieron consultar tus solicitudes: "+error.message;return;}
+  if(!data?.length){mensaje.textContent="Todavía no has manifestado interés en ninguna carga.";lista.innerHTML='<div class="empty">Cuando envíes una solicitud, aparecerá aquí.</div>';return;}
+  const ids=[...new Set(data.map(x=>x.load_id))];
+  const {data:cargas}=await supabaseClient.from("company_loads")
+    .select("id,origin_city,destination_city,loading_date,status").in("id",ids);
+  const mapa=new Map((cargas||[]).map(x=>[x.id,x]));
+  const estados={pending:"Pendiente",contacted:"La empresa te contactó",closed:"Solicitud cerrada"};
+  mensaje.textContent="Solicitudes enviadas: "+data.length;
+  data.forEach(x=>{
+    const carga=mapa.get(x.load_id),card=document.createElement("article");card.className="request";
+    card.innerHTML='<span class="status">'+escaparHTML(estados[x.status]||x.status)+'</span>'+
+      '<h3>'+(carga?escaparHTML(carga.origin_city)+' → '+escaparHTML(carga.destination_city):"Carga ya no disponible")+'</h3>'+
+      '<p class="small">Fecha de cargue: '+escaparHTML(carga?.loading_date||"No disponible")+'</p>'+
+      '<p class="small">Enviada: '+escaparHTML(new Date(x.created_at).toLocaleString("es-CO"))+'</p>';
+    lista.appendChild(card);
+  });
+}
+
 async function cargarHistorialAdmin(){
   const mensaje=$("mensajeHistorialAdmin"),lista=$("listaHistorialAdmin");
   if(!usuarioActual||!esAdministrador){mensaje.textContent="No autorizado.";return;}
@@ -1107,6 +1267,10 @@ async function cargarHistorialAdmin(){
   mensaje.textContent="Últimas acciones: "+data.length;
   lista.innerHTML=data.map(x=>'<div class="request" style="margin-top:8px"><b>'+escaparHTML(x.action)+'</b><p class="small">Objetivo: '+escaparHTML(x.target_id)+'</p><p class="small">Motivo: '+escaparHTML(x.reason||"No indicado")+'</p><p class="small">'+escaparHTML(new Date(x.created_at).toLocaleString("es-CO"))+'</p></div>').join("");
 }
+$("actualizarUsuariosAdmin").addEventListener("click",cargarUsuariosAdmin);
+$("actualizarInteresesAdmin").addEventListener("click",cargarSolicitudesInteresAdmin);
+$("filtroInteresesAdmin").addEventListener("change",cargarSolicitudesInteresAdmin);
+$("actualizarMisSolicitudes").addEventListener("click",cargarMisSolicitudes);
 $("actualizarEmpresasAdmin").addEventListener("click",cargarEmpresasAdmin);
 $("actualizarCargasAdmin").addEventListener("click",cargarCargasAdmin);
 $("filtroCargasAdmin").addEventListener("change",cargarCargasAdmin);
@@ -1123,7 +1287,7 @@ const demo=[
 ];
 
 let personal=[];
-const todas=()=>[...cargasReales,...personal,...demo];
+const todas=()=>["driver","owner","owner_driver"].includes(rolUsuario)?cargasReales:[...cargasReales,...personal,...demo];
 const dinero=n=>new Intl.NumberFormat("es-CO",{style:"currency",currency:"COP",maximumFractionDigits:0}).format(n||0);
 
 function normalizar(texto){
@@ -1171,9 +1335,10 @@ document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{
   if(b.dataset.tab==="administracion"&&!esAdministrador) return;
   document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active",x===b));
   document.querySelectorAll(".view").forEach(x=>x.classList.toggle("hidden",x.id!==b.dataset.tab));
-  if(b.dataset.tab==="administracion"){cargarSolicitudesAdmin();cargarSolicitudesConductoresAdmin();cargarEmpresasAdmin();cargarCargasAdmin();cargarHistorialAdmin();}
+  if(b.dataset.tab==="administracion"){cargarSolicitudesAdmin();cargarSolicitudesConductoresAdmin();cargarEmpresasAdmin();cargarCargasAdmin();cargarHistorialAdmin();cargarUsuariosAdmin();cargarSolicitudesInteresAdmin();}
   if(b.dataset.tab==="empresa") cargarInteresadosEmpresa();
   if(b.dataset.tab==="misPublicaciones") cargarMisPublicaciones();
+  if(b.dataset.tab==="misSolicitudes") cargarMisSolicitudes();
   if(b.dataset.tab==="verificacionConductor"&&usuarioActual) cargarSolicitudConductor(usuarioActual);
 });
 
