@@ -189,8 +189,8 @@ textarea{min-height:75px;resize:vertical}
 
 <section id="empresa" class="view hidden">
 <div class="panel">
-<h2>Registro de empresa transportadora</h2>
-<p class="small">Completa los datos de tu empresa y adjunta un documento de soporte para solicitar la verificación de RUTA CARGA.</p>
+<h2 id="tituloEstadoEmpresa">Registro de empresa transportadora</h2>
+<p class="small" id="descripcionEstadoEmpresa">Completa los datos de tu empresa y adjunta un documento de soporte para solicitar la verificación de RUTA CARGA.</p>
 <div id="estadoEmpresa" class="small" aria-live="polite">Consultando solicitudes anteriores...</div>
 <div id="formularioEmpresa">
 <div class="formgrid">
@@ -525,6 +525,14 @@ async function cargarEmpresaDesdeSupabase(user){
   };
   const puedeReenviar=data.status==="rejected"||data.status==="not_submitted";
 
+  const tituloEmpresa=$("tituloEstadoEmpresa");
+  const descripcionEmpresa=$("descripcionEstadoEmpresa");
+  if(tituloEmpresa&&descripcionEmpresa){
+    tituloEmpresa.textContent=data.status==="verified"?"Verificación de empresa": "Registro de empresa transportadora";
+    descripcionEmpresa.textContent=data.status==="verified"
+      ?"Consulta el estado de verificación y administra el contacto comercial de tu empresa."
+      :"Completa los datos de tu empresa y adjunta un documento de soporte para solicitar la verificación de RUTA CARGA.";
+  }
   const mensajesEstado={
     pending:"Tu solicitud está pendiente de revisión. No necesitas volver a enviarla.",
     verified:"Tu empresa ya está verificada. No necesitas volver a enviar documentos; puedes publicar cargas reales y administrar tus publicaciones.",
