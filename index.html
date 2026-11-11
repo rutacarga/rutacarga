@@ -170,16 +170,55 @@ footer{color:#78909b}
  *,*:before,*:after{scroll-behavior:auto!important;transition:none!important;animation:none!important}
 }
 
+
+/* Identidad RUTA CARGA · rojo y negro */
+:root{--navy:#101014;--blue:#a20f20;--bg:#f4f3f3;--ink:#17171b;--muted:#68656a;--line:#dedadd;--green:#13845b;--red:#c51d32;--cyan:#d62b40;--lime:#f1b8bf}
+body{background:linear-gradient(180deg,#f8f7f7,#efedef);color:#19181c}
+header{background:linear-gradient(112deg,#09090c 0%,#171217 58%,#74101d 100%);border-bottom:4px solid #c51d32}
+header:after{background:rgba(197,29,50,.24)}
+.brand{gap:13px}
+.brand-mark{width:54px;height:42px;flex:0 0 auto;filter:drop-shadow(0 3px 8px #0008)}
+.brand-word{display:flex;align-items:baseline;gap:7px}
+.brand-word span:first-child{color:#fff}
+.brand-word span:last-child{color:#ed3348}
+header p{color:#f2cbd0}
+.tab.active{background:linear-gradient(120deg,#17171b,#a20f20);box-shadow:0 7px 18px #8b122533}
+.tab:hover{border-color:#d98b95;color:#a20f20}
+input:focus,select:focus,textarea:focus{border-color:#c51d32;box-shadow:0 0 0 4px #c51d321c}
+.btn{background:linear-gradient(120deg,#17171b,#a20f20);box-shadow:0 5px 13px #a20f2022}
+.btn:hover{box-shadow:0 8px 18px #a20f2033}
+.btn.secondary{background:#f5e9eb;color:#851222;border-color:#ead0d4}
+.btn.success{background:linear-gradient(120deg,#17171b,#a20f20)}
+.btn.danger{background:linear-gradient(120deg,#8c1020,#d52a40)}
+.route span{color:#c51d32}
+.chip{background:#f8ecee;color:#8d1b2a;border-color:#efd8dc}
+.price{color:#9b1828}
+.panel:hover{border-color:#e4b9c0}
+#acceso{background:linear-gradient(120deg,#fff,#fff7f8);border-color:#e6c4c9}
+#panelSeleccionRol{border-color:#e5b7be;background:linear-gradient(130deg,#fff4f5,#fff 62%,#f7eeee)}
+/* Franja gráfica inspirada en la tercera propuesta */
+.brand-hero{max-width:1180px;margin:22px auto 0;padding:0 20px}
+.brand-hero-inner{position:relative;overflow:hidden;min-height:210px;border-radius:22px;background:radial-gradient(ellipse at 72% 45%,#721321 0%,#351018 36%,#101014 78%);border:1px solid #4a1b23;box-shadow:0 18px 42px #17070c26;color:white;padding:30px 34px;display:flex;align-items:center}
+.brand-hero-inner:before{content:"";position:absolute;width:300px;height:300px;right:8%;top:-90px;border:1px solid #e23b503b;border-radius:50%;box-shadow:0 0 0 26px #e23b5010,0 0 0 55px #e23b500a}
+.brand-hero-copy{position:relative;z-index:1;max-width:590px}
+.brand-hero h1{font-size:clamp(27px,4.2vw,46px);line-height:1.03;letter-spacing:-1.5px;margin:0 0 10px;color:white}
+.brand-hero h1 em{font-style:normal;color:#f04458}
+.brand-hero p{color:#e7d7da;margin:0;font-size:14px;line-height:1.6}
+.brand-hero-truck{position:absolute;right:7%;bottom:15px;width:min(36%,390px);height:auto;opacity:.92}
+@media(max-width:650px){.brand-hero{padding:0 12px;margin-top:14px}.brand-hero-inner{padding:24px 20px;min-height:220px}.brand-hero-copy{max-width:100%}.brand-hero-truck{width:52%;right:-5%;bottom:4px;opacity:.24}.brand-hero h1{font-size:30px}}
+
 </style>
 </head>
 <body>
 
 <header>
 <div class="header">
-<div class="brand">🚛 RUTA CARGA</div>
+<div class="brand"><svg class="brand-mark" viewBox="0 0 100 70" role="img" aria-label="Camión RUTA CARGA"><path d="M4 15h48v34H4z" fill="#c51d32"/><path d="M52 27h22l18 15v7H52z" fill="#fff"/><path d="M69 31h7l10 10H69z" fill="#c51d32"/><circle cx="25" cy="53" r="9" fill="#111"/><circle cx="25" cy="53" r="4" fill="#eee"/><circle cx="75" cy="53" r="9" fill="#111"/><circle cx="75" cy="53" r="4" fill="#eee"/><path d="M7 8h36M0 17h28" stroke="#f04458" stroke-width="4" stroke-linecap="round"/></svg><span class="brand-word"><span>RUTA</span><span>CARGA</span></span></div>
 <p>La red nacional del hombre camión · Colombia</p>
 </div>
 </header>
+
+<section class="brand-hero" aria-label="Identidad RUTA CARGA"><div class="brand-hero-inner"><div class="brand-hero-copy"><h1>Conectamos <em>el transporte</em> de Colombia</h1><p>Encuentra cargas, publica tus viajes y mueve el país con RUTA CARGA.</p></div><svg class="brand-hero-truck" viewBox="0 0 520 170" aria-hidden="true"><path d="M25 30h270v92H25z" fill="#f4eeee" stroke="#d52a40" stroke-width="5"/><path d="M295 62h105l87 56v4H295z" fill="#eee7e8" stroke="#d52a40" stroke-width="5"/><path d="M411 75h-48v-2h48l48 42h-36z" fill="#171217"/><path d="M50 54h205M50 72h155" stroke="#a20f20" stroke-width="8" stroke-linecap="round"/><circle cx="105" cy="132" r="27" fill="#111" stroke="#eee" stroke-width="7"/><circle cx="105" cy="132" r="10" fill="#b91e32"/><circle cx="385" cy="132" r="27" fill="#111" stroke="#eee" stroke-width="7"/><circle cx="385" cy="132" r="10" fill="#b91e32"/><path d="M5 153h490" stroke="#e83a50" stroke-width="5" stroke-linecap="round" stroke-dasharray="24 16"/></svg></div></section>
 
 <main>
 <section class="panel" id="acceso">
