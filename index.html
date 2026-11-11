@@ -424,6 +424,9 @@ async function cargarEmpresaDesdeSupabase(user){
 
   if(!data){
     estado.textContent="Todavía no has enviado una solicitud de verificación.";
+    formulario.querySelectorAll("input").forEach(input=>input.disabled=false);
+    boton.disabled=false;
+    boton.textContent="Enviar solicitud de verificación";
     return;
   }
 
@@ -439,15 +442,19 @@ async function cargarEmpresaDesdeSupabase(user){
     suspended:"Verificación suspendida",
     not_submitted:"No enviada"
   };
+  const puedeReenviar=data.status==="rejected"||data.status==="not_submitted";
 
-  estado.innerHTML='<span class="status '+data.status+'">'+
-    (estados[data.status]||"Estado: "+escaparHTML(data.status))+
-    '</span><p class="small">Ya existe una solicitud asociada a esta cuenta. Por seguridad, este formulario no permite crear una segunda solicitud.</p>'+
+  estado.innerHTML='<span class="status '+escaparHTML(data.status)+'">'+
+    escaparHTML(estados[data.status]||"Estado: "+data.status)+
+    '</span>'+
+    (puedeReenviar
+      ?'<p class="small">La solicitud fue rechazada o quedó sin enviar. Corrige los datos si es necesario y adjunta nuevamente el documento para solicitar otra revisión.</p>'
+      :'<p class="small">Ya existe una solicitud asociada a esta cuenta. No se puede crear otra mientras esté pendiente, aprobada o suspendida.</p>')+
     (data.review_notes?'<p class="small"><b>Observaciones:</b> '+escaparHTML(data.review_notes)+'</p>':"");
 
-  formulario.querySelectorAll("input").forEach(input=>input.disabled=true);
-  boton.disabled=true;
-  boton.textContent="Solicitud ya registrada";
+  formulario.querySelectorAll("input").forEach(input=>input.disabled=!puedeReenviar);
+  boton.disabled=!puedeReenviar;
+  boton.textContent=puedeReenviar?"Reenviar solicitud corregida":"Solicitud ya registrada";
 }
 
 function escaparHTML(valor){
@@ -696,13 +703,31 @@ async function comprobarAdministrador(user){
     esAdministrador=false;
     empresaVerificada=false;
     $("tabAdmin").classList.add("hidden");
+    $("tabPublicar").classList.add("hidden");
     $("tabVerificacionConductor").classList.add("hidden");
     return;
   }
 
   rolUsuario=data?.role||null;
   esAdministrador=!!data&&data.role==="admin"&&data.verification_status==="verified";
-  empresaVerificada=!!data&&data.verification_status==="verified"&&(data.role==="company"||data.role==="admin");
+
+  let verificacionEmpresa=null;
+  if(data?.role==="company"){
+    const {data:solicitudEmpresa,error:errorEmpresa}=await supabaseClient
+      .from("company_verifications")
+      .select("status")
+      .eq("user_id",user.id)
+      .maybeSingle();
+    if(!errorEmpresa) verificacionEmpresa=solicitudEmpresa?.status||null;
+  }
+
+  empresaVerificada=!!data
+    && data.verification_status==="verified"
+    && (
+      data.role==="admin"
+      || (data.role==="company"&&verificacionEmpresa==="verified")
+    );
+
   const puedeVerificarConductor=["driver","owner","owner_driver"].includes(rolUsuario);
   $("tabAdmin").classList.toggle("hidden",!esAdministrador);
   $("tabPublicar").classList.toggle("hidden",!empresaVerificada);
@@ -1179,9 +1204,14 @@ $("enviarEmpresa").onclick=async()=>{
   const nit=$("nitEmpresa").value.trim();
   const referencia=$("referenciaAutorizacion").value.trim();
   const archivo=$("documentoEmpresa").files[0];
+  const puedeReenviar=!!solicitudEmpresaExistente
+    && ["rejected","not_submitted"].includes(solicitudEmpresaExistente.status);
 
   if(!usuarioActual){mensaje.textContent="Debes iniciar sesión con Google.";return;}
-  if(solicitudEmpresaExistente){mensaje.textContent="Esta cuenta ya tiene una solicitud registrada.";return;}
+  if(solicitudEmpresaExistente&&!puedeReenviar){
+    mensaje.textContent="Esta solicitud ya está pendiente, aprobada o suspendida.";
+    return;
+  }
   if(!razonSocial||!nit){mensaje.textContent="Completa la razón social y el NIT.";return;}
   if(!archivo){mensaje.textContent="Selecciona el documento de soporte de la empresa.";return;}
   if(archivo.size>10*1024*1024){mensaje.textContent="El documento supera el límite de 10 MB.";return;}
@@ -1190,12 +1220,12 @@ $("enviarEmpresa").onclick=async()=>{
   if(!tiposPermitidos.includes(archivo.type)){mensaje.textContent="Solo se permiten archivos PDF, JPG o PNG.";return;}
 
   boton.disabled=true;
-  boton.textContent="Enviando solicitud...";
+  boton.textContent=puedeReenviar?"Reenviando solicitud...":"Enviando solicitud...";
   mensaje.textContent="Cargando el documento privado...";
   let rutaArchivo=null;
 
   try{
-    const nombreSeguro=archivo.name.normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-zA-Z0-9._-]/g,"_");
+    const nombreSeguro=archivo.name.normalize("NFD").replace(/[\\u0300-\\u036f]/g,"").replace(/[^a-zA-Z0-9._-]/g,"_");
     rutaArchivo=usuarioActual.id+"/"+Date.now()+"_"+nombreSeguro;
 
     const {error:errorSubida}=await supabaseClient.storage.from("company-documents")
@@ -1205,12 +1235,11 @@ $("enviarEmpresa").onclick=async()=>{
 
     mensaje.textContent="Documento cargado. Registrando solicitud...";
 
-    const {error:errorRegistro}=await supabaseClient.from("company_verifications").insert({
-      user_id:usuarioActual.id,
-      legal_name:razonSocial,
-      nit:nit,
-      transport_authorization_reference:referencia||null,
-      document_storage_path:rutaArchivo
+    const {error:errorRegistro}=await supabaseClient.rpc("submit_company_verification",{
+      p_legal_name:razonSocial,
+      p_nit:nit,
+      p_transport_authorization_reference:referencia||null,
+      p_document_storage_path:rutaArchivo
     });
 
     if(errorRegistro){
@@ -1219,13 +1248,18 @@ $("enviarEmpresa").onclick=async()=>{
       throw new Error("No se pudo registrar la solicitud: "+errorRegistro.message);
     }
 
-    mensaje.textContent="¡Solicitud enviada! Tu empresa quedó registrada para revisión. Todavía no está verificada.";
+    mensaje.textContent=puedeReenviar
+      ?"¡Solicitud corregida y reenviada! Tu empresa quedó nuevamente pendiente de revisión."
+      :"¡Solicitud enviada! Tu empresa quedó registrada para revisión. Todavía no está verificada.";
     await cargarEmpresaDesdeSupabase(usuarioActual);
   }catch(error){
     mensaje.textContent=error.message||"Ocurrió un error al enviar la solicitud.";
   }finally{
-    boton.disabled=!!solicitudEmpresaExistente;
-    if(!solicitudEmpresaExistente) boton.textContent="Enviar solicitud de verificación";
+    const puedeReenviarAhora=!!solicitudEmpresaExistente
+      && ["rejected","not_submitted"].includes(solicitudEmpresaExistente.status);
+    boton.disabled=!!solicitudEmpresaExistente&&!puedeReenviarAhora;
+    boton.textContent=puedeReenviarAhora?"Reenviar solicitud corregida":
+      solicitudEmpresaExistente?"Solicitud ya registrada":"Enviar solicitud de verificación";
   }
 };
 
@@ -1395,6 +1429,7 @@ document.addEventListener("click",async(event)=>{
   if(!boton)return;
   const mensaje=boton.closest(".load").querySelector(".interesMensaje");
   if(!usuarioActual){mensaje.textContent="Inicia sesión para manifestar interés.";return;}
+  if(!conductorVerificado){mensaje.textContent="Para manifestar interés debes tener aprobada tu verificación de conductor. Abre la sección Verificación de conductor y envía tus documentos.";return;}
   const nombre=prompt("¿Cuál es tu nombre completo?");
   if(nombre===null)return;
   if(nombre.trim().length<2){mensaje.textContent="Escribe tu nombre completo.";return;}
