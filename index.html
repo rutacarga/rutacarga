@@ -1264,14 +1264,22 @@ async function cargarMisSolicitudes(){
 async function cargarHistorialAdmin(){
   const mensaje=$("mensajeHistorialAdmin"),lista=$("listaHistorialAdmin");
   if(!usuarioActual||!esAdministrador){mensaje.textContent="No autorizado.";return;}
-  mensaje.textContent="Consultando historial...";lista.innerHTML="";
-  const {data,error}=await supabaseClient.from("admin_action_logs")
-    .select("action,target_id,reason,details,created_at")
-    .order("created_at",{ascending:false}).limit(100);
-  if(error){mensaje.textContent="No se pudo consultar el historial: "+error.message;return;}
-  if(!data?.length){mensaje.textContent="Todavía no hay acciones administrativas registradas.";return;}
-  mensaje.textContent="Últimas acciones: "+data.length;
-  lista.innerHTML=data.map(x=>'<div class="request" style="margin-top:8px"><b>'+escaparHTML(x.action)+'</b><p class="small">Objetivo: '+escaparHTML(x.target_id)+'</p><p class="small">Motivo: '+escaparHTML(x.reason||"No indicado")+'</p><p class="small">'+escaparHTML(new Date(x.created_at).toLocaleString("es-CO"))+'</p></div>').join("");
+  mensaje.textContent="Consultando todos los historiales...";lista.innerHTML="";
+  const [{data:adminLogs,error:e1},{data:loadLogs,error:e2},{data:requestLogs,error:e3}]=await Promise.all([
+    supabaseClient.from("admin_action_logs").select("action,target_id,reason,details,created_at").order("created_at",{ascending:false}).limit(100),
+    supabaseClient.from("company_load_status_history").select("load_id,company_id,old_status,new_status,reason,changed_at").order("changed_at",{ascending:false}).limit(100),
+    supabaseClient.from("load_interest_status_history").select("request_id,old_status,new_status,changed_at,changed_by").order("changed_at",{ascending:false}).limit(100)
+  ]);
+  const fallos=[e1,e2,e3].filter(Boolean);
+  if(fallos.length){mensaje.textContent="No se pudieron consultar todos los historiales: "+fallos.map(x=>x.message).join(" · ");return;}
+  const eventos=[
+    ...(adminLogs||[]).map(x=>({fecha:x.created_at,tipo:"Acción administrativa · "+x.action,objetivo:x.target_id,detalle:x.reason||"Sin motivo registrado"})),
+    ...(loadLogs||[]).map(x=>({fecha:x.changed_at,tipo:"Cambio de carga · "+x.old_status+" → "+x.new_status,objetivo:x.load_id,detalle:(x.reason||"Sin motivo")+" · Empresa: "+x.company_id})),
+    ...(requestLogs||[]).map(x=>({fecha:x.changed_at,tipo:"Cambio de solicitud · "+x.old_status+" → "+x.new_status,objetivo:x.request_id,detalle:"Responsable: "+(x.changed_by||"No indicado")}))
+  ].sort((a,b)=>new Date(b.fecha)-new Date(a.fecha));
+  mensaje.textContent="Eventos consultados: "+eventos.length+" (hasta 100 por categoría).";
+  if(!eventos.length){lista.innerHTML='<div class="empty">Todavía no hay movimientos registrados.</div>';return;}
+  lista.innerHTML=eventos.map(x=>'<div class="request" style="margin-top:8px"><b>'+escaparHTML(x.tipo)+'</b><p class="small">Objetivo: '+escaparHTML(x.objetivo)+'</p><p class="small">Detalle: '+escaparHTML(x.detalle)+'</p><p class="small">'+escaparHTML(new Date(x.fecha).toLocaleString("es-CO"))+'</p></div>').join("");
 }
 $("actualizarUsuariosAdmin").addEventListener("click",cargarUsuariosAdmin);
 $("actualizarInteresesAdmin").addEventListener("click",cargarSolicitudesInteresAdmin);
