@@ -993,7 +993,7 @@ async function comprobarAdministrador(user){
   // Las cuentas ya verificadas no deben seguir viendo el formulario de registro.
   $("panelRegistroEmpresa").classList.toggle("hidden",empresaVerificada);
 
-  const puedeVerificarConductor=["driver","owner","owner_driver"].includes(rolUsuario);
+  const puedeVerificarConductor=["driver","owner_driver"].includes(rolUsuario);
   $("tabAdmin").classList.toggle("hidden",!esAdministrador);
   $("tabPublicar").classList.toggle("hidden",!puedePublicarCargas);
   $("tabMisPublicaciones").classList.toggle("hidden",!puedePublicarCargas);
@@ -1006,13 +1006,14 @@ async function comprobarAdministrador(user){
 }
 
 function configurarPanelPorRol(){
-  const esConductor=["driver","owner","owner_driver"].includes(rolUsuario);
+  const esConductor=["driver","owner_driver"].includes(rolUsuario);
+  const esPropietario=["owner","owner_driver"].includes(rolUsuario);
   const esEmpresa=rolUsuario==="company";
   const tabs={
-    buscar:esAdministrador||esConductor,
+    buscar:esAdministrador||esConductor||esPropietario,
     retorno:esAdministrador,
     rentabilidad:esAdministrador,
-    perfil:esAdministrador||esConductor,
+    perfil:esAdministrador||esConductor||esPropietario,
     verificacionConductor:esAdministrador||esConductor,
     misSolicitudes:esConductor,
     empresa:esAdministrador||esEmpresa,
