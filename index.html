@@ -198,14 +198,13 @@ input:focus,select:focus,textarea:focus{border-color:#c51d32;box-shadow:0 0 0 4p
 #panelSeleccionRol{border-color:#e5b7be;background:linear-gradient(130deg,#fff4f5,#fff 62%,#f7eeee)}
 /* Franja gráfica inspirada en la tercera propuesta */
 .brand-hero{max-width:1180px;margin:22px auto 0;padding:0 20px}
-.brand-hero-inner{position:relative;overflow:hidden;min-height:210px;border-radius:22px;background:radial-gradient(ellipse at 72% 45%,#721321 0%,#351018 36%,#101014 78%);border:1px solid #4a1b23;box-shadow:0 18px 42px #17070c26;color:white;padding:30px 34px;display:flex;align-items:center}
-.brand-hero-inner:before{content:"";position:absolute;width:300px;height:300px;right:8%;top:-90px;border:1px solid #e23b503b;border-radius:50%;box-shadow:0 0 0 26px #e23b5010,0 0 0 55px #e23b500a}
-.brand-hero-copy{position:relative;z-index:1;max-width:590px}
-.brand-hero h1{font-size:clamp(27px,4.2vw,46px);line-height:1.03;letter-spacing:-1.5px;margin:0 0 10px;color:white}
-.brand-hero h1 em{font-style:normal;color:#f04458}
-.brand-hero p{color:#e7d7da;margin:0;font-size:14px;line-height:1.6}
-.brand-hero-truck{position:absolute;right:7%;bottom:15px;width:min(36%,390px);height:auto;opacity:.92}
-@media(max-width:650px){.brand-hero{padding:0 12px;margin-top:14px}.brand-hero-inner{padding:24px 20px;min-height:220px}.brand-hero-copy{max-width:100%}.brand-hero-truck{width:52%;right:-5%;bottom:4px;opacity:.24}.brand-hero h1{font-size:30px}}
+.brand-hero-inner{position:relative;isolation:isolate;overflow:hidden;min-height:330px;border-radius:22px;background:#111 url("https://assets.volvo.com/is/image/VolvoInformationTechnologyAB/volvo-fh-aero-aus?dpr=off&fit=constrain&qlt=82&ts=1745281542431&wid=1600") center 54%/cover no-repeat;border:1px solid #3a2529;box-shadow:0 18px 42px #17070c26;color:white;padding:38px 40px;display:flex;align-items:center}
+.brand-hero-inner:before{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(90deg,rgba(8,8,10,.94) 0%,rgba(12,10,12,.82) 34%,rgba(12,10,12,.18) 75%,rgba(12,10,12,.06) 100%)}
+.brand-hero-copy{position:relative;z-index:1;max-width:520px}
+.brand-hero h1{font-size:clamp(29px,4.2vw,48px);line-height:1.04;letter-spacing:-1.5px;margin:0 0 12px;color:white;text-shadow:0 2px 12px #0008}
+.brand-hero h1 em{font-style:normal;color:#ff4055}
+.brand-hero p{color:#fff;margin:0;font-size:15px;line-height:1.65;max-width:430px;text-shadow:0 1px 8px #000}
+@media(max-width:650px){.brand-hero{padding:0 12px;margin-top:14px}.brand-hero-inner{padding:25px 20px;min-height:280px;background-position:58% center}.brand-hero-inner:before{background:linear-gradient(90deg,rgba(8,8,10,.9),rgba(8,8,10,.62) 60%,rgba(8,8,10,.24))}.brand-hero-copy{max-width:100%}.brand-hero h1{font-size:31px}.brand-hero p{font-size:14px}}
 
 </style>
 </head>
@@ -218,7 +217,7 @@ input:focus,select:focus,textarea:focus{border-color:#c51d32;box-shadow:0 0 0 4p
 </div>
 </header>
 
-<section class="brand-hero" aria-label="Identidad RUTA CARGA"><div class="brand-hero-inner"><div class="brand-hero-copy"><h1>Conectamos <em>el transporte</em> de Colombia</h1><p>Encuentra cargas, publica tus viajes y mueve el país con RUTA CARGA.</p></div><svg class="brand-hero-truck" viewBox="0 0 520 170" aria-hidden="true"><path d="M25 30h270v92H25z" fill="#f4eeee" stroke="#d52a40" stroke-width="5"/><path d="M295 62h105l87 56v4H295z" fill="#eee7e8" stroke="#d52a40" stroke-width="5"/><path d="M411 75h-48v-2h48l48 42h-36z" fill="#171217"/><path d="M50 54h205M50 72h155" stroke="#a20f20" stroke-width="8" stroke-linecap="round"/><circle cx="105" cy="132" r="27" fill="#111" stroke="#eee" stroke-width="7"/><circle cx="105" cy="132" r="10" fill="#b91e32"/><circle cx="385" cy="132" r="27" fill="#111" stroke="#eee" stroke-width="7"/><circle cx="385" cy="132" r="10" fill="#b91e32"/><path d="M5 153h490" stroke="#e83a50" stroke-width="5" stroke-linecap="round" stroke-dasharray="24 16"/></svg></div></section>
+<section class="brand-hero" aria-label="RUTA CARGA, conectamos el transporte de Colombia"><div class="brand-hero-inner"><div class="brand-hero-copy"><h1>Conectamos <em>el transporte</em> de Colombia</h1><p>Encuentra cargas, publica tus viajes y mueve el país con RUTA CARGA.</p></div></div></section>
 
 <main>
 <section class="panel" id="acceso">
