@@ -1229,6 +1229,7 @@ $("enviarEmpresa").onclick=async()=>{
 
     $("documentoEmpresa").value="";
     mensaje.textContent="¡Solicitud enviada! Tu empresa quedó registrada para revisión. Todavía no está verificada.";
+    solicitudEmpresaExistente={status:"pending"};
     await cargarEmpresaDesdeSupabase(usuarioActual);
   }catch(error){
     mensaje.textContent=error.message||"Ocurrió un error al enviar la solicitud.";
