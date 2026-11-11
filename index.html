@@ -1173,6 +1173,7 @@ document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{
   document.querySelectorAll(".view").forEach(x=>x.classList.toggle("hidden",x.id!==b.dataset.tab));
   if(b.dataset.tab==="administracion"){cargarSolicitudesAdmin();cargarSolicitudesConductoresAdmin();cargarEmpresasAdmin();cargarCargasAdmin();cargarHistorialAdmin();}
   if(b.dataset.tab==="empresa") cargarInteresadosEmpresa();
+  if(b.dataset.tab==="misPublicaciones") cargarMisPublicaciones();
   if(b.dataset.tab==="verificacionConductor"&&usuarioActual) cargarSolicitudConductor(usuarioActual);
 });
 
