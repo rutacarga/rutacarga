@@ -207,63 +207,18 @@ input:focus,select:focus,textarea:focus{border-color:#c51d32;box-shadow:0 0 0 4p
 .brand-hero-truck{position:absolute;right:7%;bottom:15px;width:min(36%,390px);height:auto;opacity:.92}
 @media(max-width:650px){.brand-hero{padding:0 12px;margin-top:14px}.brand-hero-inner{padding:24px 20px;min-height:220px}.brand-hero-copy{max-width:100%}.brand-hero-truck{width:52%;right:-5%;bottom:4px;opacity:.24}.brand-hero h1{font-size:30px}}
 
-
-/* RUTA CARGA · renovación de legibilidad y tractocamión moderno */
-:root{--navy:#17191f;--blue:#b51f32;--bg:#f5f6f8;--ink:#17191f;--muted:#5d6570;--line:#dfe3e8;--green:#13845b;--red:#b51f32}
-body{background:#f5f6f8;color:#17191f}
-header{background:#fff;color:#17191f;border-bottom:1px solid #e4e7eb;box-shadow:0 4px 18px #17202b0a;padding:20px}
-header:before,header:after{display:none}
-.brand{gap:12px;text-shadow:none}
-.brand-symbol{width:34px;height:30px;display:inline-flex;align-items:flex-end;gap:3px;transform:skew(-22deg)}
-.brand-symbol i{display:block;width:8px;border-radius:3px 3px 0 0;background:#bd2034}
-.brand-symbol i:nth-child(1){height:15px}.brand-symbol i:nth-child(2){height:23px}.brand-symbol i:nth-child(3){height:30px}
-.brand-word span:first-child{color:#17191f}.brand-word span:last-child{color:#bd2034}
-header p{color:#535c67;font-weight:600}
-.brand-hero{margin:18px auto 0}
-.brand-hero-inner{min-height:270px;background:linear-gradient(110deg,#fff 0%,#f8f9fb 58%,#eef1f4 100%);border:1px solid #e0e4e9;border-radius:20px;box-shadow:0 12px 32px #1018200b;color:#17191f;padding:34px 38px}
-.brand-hero-inner:before{border-color:#c51d3220;box-shadow:0 0 0 34px #c51d3208,0 0 0 70px #c51d3205}
-.brand-hero-copy{max-width:510px}
-.hero-kicker{display:inline-block;margin-bottom:12px;color:#b51f32;font-size:11px;font-weight:900;letter-spacing:.14em}
-.brand-hero h1{color:#17191f;font-size:clamp(30px,4.3vw,48px);line-height:1.08;letter-spacing:-1.6px}
-.brand-hero h1 em{color:#b51f32}
-.brand-hero p{color:#4e5864;font-size:15px;max-width:470px}
-.brand-hero-truck{width:min(56%,600px);right:1%;bottom:2px;opacity:1;filter:drop-shadow(0 12px 12px #11182712)}
-.tab.active{background:#191b21;color:#fff;box-shadow:0 5px 14px #17191f22}
-.tab:hover{border-color:#d88994;color:#a6192c}
-.btn{background:#b51f32;box-shadow:0 4px 12px #b51f3220}
-.btn:hover{background:#98182a;box-shadow:0 7px 16px #b51f3230}
-.btn.secondary{background:#f0f1f3;color:#242830;border-color:#dfe2e7}
-.btn.success{background:#147b59}
-.btn.danger{background:#a7192b}
-.route span{color:#b51f32}
-.chip{background:#f7eaed;color:#891b2a;border-color:#efd7dc}
-.price{color:#17704f}
-input:focus,select:focus,textarea:focus{border-color:#b51f32;box-shadow:0 0 0 4px #b51f3218}
-.panel{border-color:#e1e4e8;box-shadow:0 6px 22px #17202b08}
-#acceso{background:#fff;border-color:#e1e4e8}
-#panelSeleccionRol{background:#fff;border-color:#e1e4e8}
-@media(max-width:700px){
- header{background:#fff;padding:17px}
- .brand-hero-inner{min-height:320px;padding:25px 22px 145px}
- .brand-hero-copy{max-width:100%}
- .brand-hero-truck{width:100%;right:-7%;bottom:-8px;opacity:1}
- .brand-hero h1{font-size:31px;max-width:360px}
- .brand-hero p{font-size:13px;max-width:360px}
-}
-@media(max-width:430px){.brand-symbol{width:29px}.brand-word{font-size:25px}}
-
 </style>
 </head>
 <body>
 
 <header>
 <div class="header">
-<div class="brand"><span class="brand-symbol" aria-hidden="true"><i></i><i></i><i></i></span><span class="brand-word"><span>RUTA</span><span>CARGA</span></span></div>
+<div class="brand"><svg class="brand-mark" viewBox="0 0 100 70" role="img" aria-label="Camión RUTA CARGA"><path d="M4 15h48v34H4z" fill="#c51d32"/><path d="M52 27h22l18 15v7H52z" fill="#fff"/><path d="M69 31h7l10 10H69z" fill="#c51d32"/><circle cx="25" cy="53" r="9" fill="#111"/><circle cx="25" cy="53" r="4" fill="#eee"/><circle cx="75" cy="53" r="9" fill="#111"/><circle cx="75" cy="53" r="4" fill="#eee"/><path d="M7 8h36M0 17h28" stroke="#f04458" stroke-width="4" stroke-linecap="round"/></svg><span class="brand-word"><span>RUTA</span><span>CARGA</span></span></div>
 <p>La red nacional del hombre camión · Colombia</p>
 </div>
 </header>
 
-<section class="brand-hero" aria-label="Identidad RUTA CARGA"><div class="brand-hero-inner"><div class="brand-hero-copy"><span class="hero-kicker">TECNOLOGÍA PARA EL TRANSPORTE</span><h1>Conectamos el transporte <em>de Colombia</em></h1><p>Encuentra cargas, publica tus viajes y mueve el país con una red logística más simple, confiable y eficiente.</p></div><svg class="brand-hero-truck" viewBox="0 0 760 300" role="img" aria-label="Tractocamión moderno aerodinámico con tráiler de carga blanco"><defs><linearGradient id="cab" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4b515b"/><stop offset="1" stop-color="#171b22"/></linearGradient><linearGradient id="trailer" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#dfe3e8"/></linearGradient></defs><ellipse cx="390" cy="260" rx="340" ry="18" fill="#111827" opacity=".12"/><path d="M42 48H500Q511 48 511 61V222H42Z" fill="url(#trailer)" stroke="#cbd1d8" stroke-width="3"/><path d="M55 68H493" stroke="#c51d32" stroke-width="7"/><path d="M55 82H493" stroke="#e8ebef" stroke-width="2"/><path d="M512 206h-20V60h20" fill="#c51d32"/><path d="M504 177h-18" stroke="#fff" stroke-width="4"/><path d="M488 222h-20" stroke="#171b22" stroke-width="8"/><path d="M495 214h-30l-18-28-2-49q0-13 13-18l42-14 27-53q8-15 26-15h65q18 0 28 17l28 51 26 13q16 8 16 26v67h-35" fill="url(#cab)" stroke="#11151b" stroke-width="4" stroke-linejoin="round"/><path d="M560 69l21-38h54q12 0 19 12l23 43-117-1Z" fill="#b9d1df" stroke="#11151b" stroke-width="4"/><path d="M576 74h104" stroke="#fff" stroke-width="3" opacity=".65"/><path d="M695 113h25q13 0 13 15v30h-25" fill="#222831"/><path d="M695 167h36" stroke="#c51d32" stroke-width="7" stroke-linecap="round"/><path d="M514 184h-36" stroke="#e8edf2" stroke-width="8"/><path d="M542 203h-43" stroke="#c51d32" stroke-width="8"/><path d="M506 222H78" stroke="#aab2bc" stroke-width="3"/><g fill="#15191f" stroke="#68717d" stroke-width="6"><circle cx="139" cy="224" r="29"/><circle cx="139" cy="224" r="11" fill="#d9dee4"/><circle cx="430" cy="224" r="29"/><circle cx="430" cy="224" r="11" fill="#d9dee4"/><circle cx="557" cy="224" r="29"/><circle cx="557" cy="224" r="11" fill="#d9dee4"/><circle cx="680" cy="224" r="29"/><circle cx="680" cy="224" r="11" fill="#d9dee4"/></g><path d="M38 256H729" stroke="#c51d32" stroke-width="4" stroke-linecap="round" opacity=".85"/><path d="M525 245h70" stroke="#aeb6c0" stroke-width="5" stroke-linecap="round"/></svg></div></section>
+<section class="brand-hero" aria-label="Identidad RUTA CARGA"><div class="brand-hero-inner"><div class="brand-hero-copy"><h1>Conectamos <em>el transporte</em> de Colombia</h1><p>Encuentra cargas, publica tus viajes y mueve el país con RUTA CARGA.</p></div><svg class="brand-hero-truck" viewBox="0 0 520 170" aria-hidden="true"><path d="M25 30h270v92H25z" fill="#f4eeee" stroke="#d52a40" stroke-width="5"/><path d="M295 62h105l87 56v4H295z" fill="#eee7e8" stroke="#d52a40" stroke-width="5"/><path d="M411 75h-48v-2h48l48 42h-36z" fill="#171217"/><path d="M50 54h205M50 72h155" stroke="#a20f20" stroke-width="8" stroke-linecap="round"/><circle cx="105" cy="132" r="27" fill="#111" stroke="#eee" stroke-width="7"/><circle cx="105" cy="132" r="10" fill="#b91e32"/><circle cx="385" cy="132" r="27" fill="#111" stroke="#eee" stroke-width="7"/><circle cx="385" cy="132" r="10" fill="#b91e32"/><path d="M5 153h490" stroke="#e83a50" stroke-width="5" stroke-linecap="round" stroke-dasharray="24 16"/></svg></div></section>
 
 <main>
 <section class="panel" id="acceso">
