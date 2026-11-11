@@ -78,8 +78,6 @@ textarea{min-height:75px;resize:vertical}
 </section>
 
 <div id="contenidoApp" class="hidden">
-<div class="notice"><b>Información:</b> las cargas marcadas como demostración son ficticias. Las cargas reales serán publicadas por empresas transportadoras verificadas.</div>
-
 <section class="panel" id="panelRegistroEmpresa">
 <h2>¿Tienes una empresa transportadora?</h2>
 <p class="small">Puedes solicitar el registro con tu cuenta actual de Google. <b>No necesitas crear otra cuenta ni cambiar previamente tu perfil a “Empresa”.</b> Completa la razón social, el NIT y adjunta un documento oficial de soporte. RUTA CARGA revisará la solicitud y, si la aprueba, habilitará la opción para publicar cargas reales.</p>
@@ -113,7 +111,6 @@ textarea{min-height:75px;resize:vertical}
 <div class="actions">
 <button class="btn" id="filtrar">Buscar cargas</button>
 <button class="btn secondary" id="limpiar">Limpiar</button>
-<button class="btn secondary" id="abrirModal">＋ Publicar (demo)</button>
 </div>
 </div>
 <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
@@ -374,25 +371,6 @@ textarea{min-height:75px;resize:vertical}
 </main>
 
 <footer>RUTA CARGA · La red nacional del hombre camión · Colombia</footer>
-
-<div class="modal" id="modal">
-<div class="modalbox">
-<h2>Publicar oportunidad (demo)</h2>
-<p class="small">Solo las empresas de transporte verificadas podrán publicar cargas reales en la plataforma definitiva.</p>
-<div class="formgrid">
-<div><label>Origen</label><input id="nOrigen" placeholder="Escribe vereda, municipio o ciudad"></div>
-<div><label>Destino</label><input id="nDestino" placeholder="Escribe vereda, municipio o ciudad"></div>
-<div><label>Tipo</label><select id="nTipo"><option>General</option><option>Contenedor</option><option>Granel</option><option>Refrigerada</option><option>Estibas</option></select></div>
-<div><label>Pago ofrecido</label><input id="nPago" type="number" placeholder="6500000"></div>
-<div><label>Fecha</label><input id="nFecha" type="date"></div>
-<div><label>Contacto</label><input id="nContacto" placeholder="Teléfono"></div>
-</div>
-<div class="actions">
-<button class="btn" id="guardarCarga">Guardar demo</button>
-<button class="btn secondary" id="cerrarModal">Cancelar</button>
-</div>
-</div>
-</div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
@@ -866,8 +844,6 @@ function configurarPanelPorRol(){
     tab.classList.toggle("hidden",!tabs[key]);
   });
   $("panelRegistroEmpresa").classList.toggle("hidden",!esEmpresa||empresaVerificada);
-  $("abrirModal").classList.toggle("hidden",esConductor||esEmpresa);
-  if(esConductor)document.querySelector(".notice")?.classList.add("hidden");
   const activa=document.querySelector(".tab.active");
   if(!activa||activa.classList.contains("hidden")){
     const preferida=esAdministrador?"administracion":esEmpresa?"empresa":"buscar";
@@ -1310,18 +1286,7 @@ $("actualizarCargasAdmin").addEventListener("click",cargarCargasAdmin);
 $("filtroCargasAdmin").addEventListener("change",cargarCargasAdmin);
 $("actualizarHistorialAdmin").addEventListener("click",cargarHistorialAdmin);
 
-/* CARGAS DE DEMOSTRACIÓN */
-const demo=[
-{o:"Bogotá",d:"Cúcuta",t:"General",p:6800000,f:"2026-11-12"},
-{o:"Medellín",d:"Bogotá",t:"Contenedor",p:5200000,f:"2026-11-13"},
-{o:"Cali",d:"Bucaramanga",t:"Estibas",p:6100000,f:"2026-11-14"},
-{o:"Cartagena",d:"Bogotá",t:"Refrigerada",p:7900000,f:"2026-11-15"},
-{o:"Cúcuta",d:"Bogotá",t:"General",p:6400000,f:"2026-11-16"},
-{o:"Buenaventura",d:"Medellín",t:"Contenedor",p:5700000,f:"2026-11-17"}
-];
-
-let personal=[];
-const todas=()=>["driver","owner","owner_driver"].includes(rolUsuario)?cargasReales:[...cargasReales,...personal,...demo];
+const todas=()=>cargasReales;
 const dinero=n=>new Intl.NumberFormat("es-CO",{style:"currency",currency:"COP",maximumFractionDigits:0}).format(n||0);
 
 function normalizar(texto){
@@ -1332,8 +1297,8 @@ function coincide(lugar,busqueda){
 }
 
 function tarjeta(x){
-  const etiqueta=x.real?"CARGA REAL":"DEMO";
-  const detalle=x.real?(x.description||"Publicación de empresa transportadora verificada."):"Publicación ficticia de demostración. Contacto no disponible.";
+  const etiqueta="CARGA REAL";
+  const detalle=x.description||"Publicación de empresa transportadora verificada.";
   let contacto="";
   if(x.real&&x.whatsapp){
     const mensaje=encodeURIComponent("Hola, vi tu carga en RUTA CARGA: "+x.o+" → "+x.d+". ¿Sigue disponible?");
@@ -1359,8 +1324,7 @@ function tarjeta(x){
 
 function pintar(lista=todas()){
   $("cards").innerHTML=lista.length?lista.map(tarjeta).join(""):'<div class="empty">No encontramos oportunidades con esos filtros.</div>';
-  const reales=lista.filter(x=>x.real).length;
-  $("contador").textContent=reales+" reales · "+(lista.length-reales)+" demo";
+  $("contador").textContent=lista.length+" cargas reales";
 }
 
 $("abrirRegistroEmpresa").onclick=()=>document.querySelector('.tab[data-tab="empresa"]').click();
@@ -1389,7 +1353,7 @@ $("limpiar").onclick=()=>{
 $("buscarRetorno").onclick=()=>{
   const o=$("retOrigen").value,d=$("retDestino").value;
   const encontrados=todas().filter(x=>coincide(x.o,o)&&coincide(x.d,d));
-  $("retornoCards").innerHTML=encontrados.length?encontrados.map(tarjeta).join(""):'<div class="empty">No hay cargas demo para esta ruta. En la versión real se consultarán las oportunidades publicadas.</div>';
+  $("retornoCards").innerHTML=encontrados.length?encontrados.map(tarjeta).join(""):'<div class="empty">No hay cargas reales publicadas para esta ruta.</div>';
 };
 
 $("calcular").onclick=()=>{
@@ -1825,18 +1789,6 @@ $("guardarCargaReal").onclick=async()=>{
     mensaje.textContent="¡Carga publicada correctamente! Ya aparece en las oportunidades disponibles.";
   }catch(e){mensaje.textContent="No se pudo publicar: "+(e.message||"Error desconocido");}
   finally{boton.disabled=false;boton.textContent="Publicar carga";}
-};
-
-$("abrirModal").onclick=()=>$("modal").classList.add("open");
-$("cerrarModal").onclick=()=>$("modal").classList.remove("open");
-
-$("guardarCarga").onclick=()=>{
-  const o=$("nOrigen").value.trim(),d=$("nDestino").value.trim(),p=Number($("nPago").value);
-  if(!o||!d||!p){alert("Completa origen, destino y pago ofrecido.");return;}
-  personal.unshift({o,d,p,t:$("nTipo").value,f:$("nFecha").value});
-  $("modal").classList.remove("open");
-  pintar();
-  alert("Guardado como demostración únicamente en este dispositivo. No se publicó para otros usuarios.");
 };
 
 pintar();
