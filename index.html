@@ -78,6 +78,17 @@ textarea{min-height:75px;resize:vertical}
 </section>
 
 <div id="contenidoApp" class="hidden">
+<section class="panel hidden" id="panelSeleccionRol">
+<h2>¿Cómo vas a utilizar RUTA CARGA?</h2>
+<p class="small">Selecciona el tipo de cuenta que corresponde a tu actividad. Te llevaremos al panel adecuado.</p>
+<div class="actions role-options">
+<button class="btn" type="button" data-account-role="driver">Soy conductor</button>
+<button class="btn" type="button" data-account-role="owner">Soy propietario de vehículo</button>
+<button class="btn" type="button" data-account-role="company">Soy empresa transportadora</button>
+</div>
+<p class="small" id="estadoSeleccionRol" aria-live="polite"></p>
+</section>
+
 <section class="panel" id="panelRegistroEmpresa">
 <h2>¿Tienes una empresa transportadora?</h2>
 <p class="small">Puedes solicitar el registro con tu cuenta actual de Google. <b>No necesitas crear otra cuenta ni cambiar previamente tu perfil a “Empresa”.</b> Completa la razón social, el NIT y adjunta un documento oficial de soporte. RUTA CARGA revisará la solicitud y, si la aprueba, habilitará la opción para publicar cargas reales.</p>
@@ -396,6 +407,25 @@ let empresaVerificada=false;
 let puedePublicarCargas=false;
 let conductorVerificado=false;
 let cargasReales=[];
+
+document.querySelectorAll("[data-account-role]").forEach(boton=>{
+  boton.addEventListener("click",async()=>{
+    if(!usuarioActual||rolUsuario!=="pending") return;
+    const botones=[...document.querySelectorAll("[data-account-role]")];
+    botones.forEach(b=>b.disabled=true);
+    $("estadoSeleccionRol").textContent="Guardando tu tipo de cuenta...";
+    try{
+      const {data,error}=await supabaseClient.rpc("choose_account_role",{p_role:boton.dataset.accountRole});
+      if(error) throw error;
+      if(!data) throw new Error("No se pudo confirmar el tipo de cuenta.");
+      $("estadoSeleccionRol").textContent="Tipo de cuenta guardado. Abriendo tu panel...";
+      await mostrarSesion();
+    }catch(e){
+      $("estadoSeleccionRol").textContent="No se pudo guardar: "+(e.message||"Intenta nuevamente.");
+      botones.forEach(b=>b.disabled=false);
+    }
+  });
+});
 
 googleLogin.addEventListener("click",async()=>{
   estadoAcceso.textContent="Abriendo Google...";
@@ -869,6 +899,21 @@ async function mostrarSesion(){
     contenidoApp.classList.remove("hidden");
 
     await comprobarAdministrador(data.user);
+    if(rolUsuario==="pending"){
+      $("panelSeleccionRol").classList.remove("hidden");
+      $("panelRegistroEmpresa").classList.add("hidden");
+      document.querySelector(".tabs").classList.add("hidden");
+      document.querySelectorAll(".view").forEach(v=>v.classList.add("hidden"));
+      $("estadoSeleccionRol").textContent="Elige una opción para configurar tu cuenta.";
+      return;
+    }
+    if(!rolUsuario){
+      estadoAcceso.textContent="No pudimos identificar tu perfil. Cierra sesión e intenta nuevamente; si continúa, contacta al administrador.";
+      contenidoApp.classList.add("hidden");
+      return;
+    }
+    $("panelSeleccionRol").classList.add("hidden");
+    document.querySelector(".tabs").classList.remove("hidden");
     await cargarCargasReales(data.user);
     await cargarPerfilDesdeSupabase(data.user);
     await cargarEmpresaDesdeSupabase(data.user);
@@ -895,6 +940,9 @@ async function mostrarSesion(){
     puedePublicarCargas=false;
     conductorVerificado=false;
     cargasReales=[];
+    $("panelSeleccionRol").classList.add("hidden");
+    $("estadoSeleccionRol").textContent="";
+    document.querySelector(".tabs").classList.remove("hidden");
     $("tabAdmin").classList.add("hidden");
     $("tabPublicar").classList.add("hidden");
     $("tabMisPublicaciones").classList.add("hidden");
