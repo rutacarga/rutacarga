@@ -466,6 +466,13 @@ input:focus,select:focus,textarea:focus{border-color:#c51d32;box-shadow:0 0 0 4p
 <div id="listaUsuariosAdmin" class="cards"></div>
 </div>
 <div class="panel">
+<h2>Aprobación de propietarios y vehículos</h2>
+<p class="small">Revisa el perfil y los datos del vehículo registrado. La aprobación habilita al propietario en RUTA CARGA. Para aprobar, verifica previamente la documentación por el canal definido por la plataforma.</p>
+<div class="actions"><button class="btn secondary" id="actualizarPropietariosAdmin" type="button">Actualizar propietarios</button><select id="filtroPropietariosAdmin" style="max-width:220px"><option value="pending">Pendientes de aprobación</option><option value="verified">Aprobados</option><option value="rejected">Rechazados</option><option value="all">Todos</option></select></div>
+<p class="small" id="mensajePropietariosAdmin" aria-live="polite">Consultando propietarios...</p>
+<div class="cards" id="listaPropietariosAdmin"></div>
+</div>
+<div class="panel">
 <h2>Todas las solicitudes de carga</h2>
 <p class="small">Vista administrativa de los intereses enviados por conductores y propietarios, sin limitarse a una empresa.</p>
 <div class="actions"><button class="btn secondary" id="actualizarInteresesAdmin" type="button">Actualizar solicitudes</button>
@@ -1076,6 +1083,7 @@ async function mostrarSesion(){
 
     configurarPanelPorRol();
     if(esAdministrador){
+      await cargarPropietariosAdmin();
       await cargarSolicitudesAdmin();
       await cargarSolicitudesConductoresAdmin();
       await cargarEmpresasAdmin();
@@ -1115,6 +1123,54 @@ supabaseClient.auth.onAuthStateChange(()=>{
 mostrarSesion();
 
 /* ADMINISTRACIÓN */
+async function cargarPropietariosAdmin(){
+  const mensaje=$("mensajePropietariosAdmin"),lista=$("listaPropietariosAdmin");
+  if(!usuarioActual||!esAdministrador){mensaje.textContent="No autorizado.";lista.innerHTML="";return;}
+  mensaje.textContent="Consultando propietarios y vehículos...";lista.innerHTML="";
+  const filtro=$("filtroPropietariosAdmin").value;
+  let q=supabaseClient.from("profiles").select("id,full_name,city,verification_status,created_at").eq("role","owner").order("created_at",{ascending:false});
+  if(filtro!=="all") q=q.eq("verification_status",filtro==="pending"?"not_submitted":filtro);
+  const {data:perfiles,error}=await q;
+  if(error){mensaje.textContent="No se pudieron consultar propietarios: "+error.message;return;}
+  if(!perfiles?.length){mensaje.textContent="No hay propietarios en esta categoría.";lista.innerHTML='<div class="empty">No se encontraron propietarios.</div>';return;}
+  const ids=perfiles.map(p=>p.id);
+  const {data:vehiculos,error:errorVeh}=await supabaseClient.from("vehicles").select("owner_id,plate,configuration,body_type,city,availability").in("owner_id",ids);
+  if(errorVeh){mensaje.textContent="No se pudieron consultar los vehículos: "+errorVeh.message;return;}
+  const porPropietario=new Map();
+  (vehiculos||[]).forEach(v=>{if(!porPropietario.has(v.owner_id))porPropietario.set(v.owner_id,[]);porPropietario.get(v.owner_id).push(v);});
+  mensaje.textContent="Propietarios encontrados: "+perfiles.length;
+  const etiquetas={not_submitted:"Pendiente de aprobación",pending:"Pendiente de revisión",verified:"Aprobado",rejected:"Rechazado",suspended:"Suspendido"};
+  perfiles.forEach(p=>{
+    const vs=porPropietario.get(p.id)||[],card=document.createElement("article");card.className="request";
+    card.innerHTML='<span class="status '+escaparHTML(p.verification_status)+'">'+escaparHTML(etiquetas[p.verification_status]||p.verification_status)+'</span>'+
+      '<h3>'+escaparHTML(p.full_name||"Propietario")+'</h3><p class="small"><b>Ciudad:</b> '+escaparHTML(p.city||"No indicada")+'</p>'+
+      (vs.length?vs.map(v=>'<p class="small"><b>Vehículo:</b> '+escaparHTML(v.plate)+' · '+escaparHTML(v.configuration)+' · '+escaparHTML(v.body_type)+' · '+escaparHTML(v.city)+' · '+escaparHTML(v.availability)+'</p>').join(""):'<p class="small">No registra vehículos.</p>')+
+      ((p.verification_status==="not_submitted"||p.verification_status==="pending")&&vs.length?'<div class="actions"><button class="btn success aprobarPropietarioBtn" type="button">Aprobar propietario</button><button class="btn danger rechazarPropietarioBtn" type="button">Rechazar</button></div>':"")+
+      '<p class="small resultadoPropietario" aria-live="polite"></p>';
+    lista.appendChild(card);
+    const aprobar=card.querySelector(".aprobarPropietarioBtn");
+    if(aprobar) aprobar.onclick=async()=>{
+      if(!confirm("¿Confirmas la aprobación del propietario y sus datos de vehículo?"))return;
+      aprobar.disabled=true;const out=card.querySelector(".resultadoPropietario");out.textContent="Aprobando...";
+      const {error}=await supabaseClient.rpc("approve_owner",{p_user_id:p.id});
+      if(error){out.textContent="No se pudo aprobar: "+error.message;aprobar.disabled=false;return;}
+      out.textContent="Propietario aprobado.";await cargarPropietariosAdmin();
+    };
+    const rechazar=card.querySelector(".rechazarPropietarioBtn");
+    if(rechazar) rechazar.onclick=async()=>{
+      const motivo=prompt("Motivo del rechazo (mínimo 5 caracteres):");if(motivo===null)return;
+      if(motivo.trim().length<5){alert("El motivo debe tener al menos 5 caracteres.");return;}
+      if(!confirm("¿Confirmas el rechazo de este propietario?"))return;
+      rechazar.disabled=true;const out=card.querySelector(".resultadoPropietario");out.textContent="Registrando rechazo...";
+      const {error}=await supabaseClient.rpc("reject_owner",{p_user_id:p.id,p_reason:motivo.trim()});
+      if(error){out.textContent="No se pudo rechazar: "+error.message;rechazar.disabled=false;return;}
+      out.textContent="Rechazo registrado.";await cargarPropietariosAdmin();
+    };
+  });
+}
+$("actualizarPropietariosAdmin").addEventListener("click",cargarPropietariosAdmin);
+$("filtroPropietariosAdmin").addEventListener("change",cargarPropietariosAdmin);
+
 async function cargarSolicitudesAdmin(){
   const mensaje=$("mensajeAdmin");
   const lista=$("listaAdmin");
