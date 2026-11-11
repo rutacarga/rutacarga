@@ -238,12 +238,12 @@ textarea{min-height:75px;resize:vertical}
 <h2>Publicar una carga real</h2>
 <p class="small">Disponible únicamente para empresas transportadoras verificadas.</p>
 <div class="grid">
-<div><label>Origen *</label><input id="cargaOrigen" maxlength="100" placeholder="Ciudad de origen"></div>
-<div><label>Destino *</label><input id="cargaDestino" maxlength="100" placeholder="Ciudad de destino"></div>
-<div><label>Tipo de carga *</label><select id="cargaTipo"><option>General</option><option>Contenedor</option><option>Granel</option><option>Refrigerada</option><option>Estibas</option></select></div>
+<div><label>Origen *</label><input id="cargaOrigen" maxlength="100" required autocomplete="address-level2" placeholder="Ciudad de origen"></div>
+<div><label>Destino *</label><input id="cargaDestino" maxlength="100" required autocomplete="address-level2" placeholder="Ciudad de destino"></div>
+<div><label>Tipo de carga *</label><select id="cargaTipo" required><option>General</option><option>Contenedor</option><option>Granel</option><option>Refrigerada</option><option>Estibas</option></select></div>
 <div><label>Vehículo requerido</label><select id="cargaVehiculo"><option>Tractocamión</option><option>Turbo</option><option>Sencillo</option><option>Patineta</option><option>Camión rígido</option></select></div>
-<div><label>Fecha de cargue *</label><input id="cargaFecha" type="date"></div>
-<div><label>Pago ofrecido (COP) *</label><input id="cargaPago" type="number" min="1" step="1000"></div>
+<div><label>Fecha de cargue *</label><input id="cargaFecha" type="date" required></div>
+<div><label>Pago ofrecido (COP) *</label><input id="cargaPago" type="number" min="1" step="1000" inputmode="numeric" required></div>
 <div style="grid-column:1/-1"><label>Detalles adicionales</label><textarea id="cargaDescripcion" maxlength="1000"></textarea></div>
 </div>
 <button class="btn success" id="guardarCargaReal" type="button">Publicar carga</button>
@@ -401,6 +401,11 @@ const SUPABASE_ANON_KEY="sb_publishable_bVkpz6cXQ3d9BxyMCnwHEA_pYOHjiyu";
 const supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
 
 const $=id=>document.getElementById(id);
+const fechaLocalISO=()=>{
+  const ahora=new Date();
+  const local=new Date(ahora.getTime()-ahora.getTimezoneOffset()*60000);
+  return local.toISOString().slice(0,10);
+};
 const contenidoApp=$("contenidoApp");
 const googleLogin=$("googleLogin");
 const googleLogout=$("googleLogout");
@@ -478,8 +483,8 @@ async function cargarEmpresaDesdeSupabase(user){
   const formulario=$("formularioEmpresa");
   const boton=$("enviarEmpresa");
 
-  estado.textContent="Consultando solicitudes anteriores...";
-  formulario.classList.remove("hidden");
+  estado.textContent="Consultando el estado de tu empresa...";
+  formulario.classList.add("hidden");
   boton.disabled=false;
   solicitudEmpresaExistente=null;
 
@@ -499,6 +504,7 @@ async function cargarEmpresaDesdeSupabase(user){
 
   if(!data){
     estado.textContent="Todavía no has enviado una solicitud de verificación.";
+    formulario.classList.remove("hidden");
     formulario.querySelectorAll("input").forEach(input=>input.disabled=false);
     boton.disabled=false;
     boton.textContent="Enviar solicitud de verificación";
@@ -519,14 +525,20 @@ async function cargarEmpresaDesdeSupabase(user){
   };
   const puedeReenviar=data.status==="rejected"||data.status==="not_submitted";
 
+  const mensajesEstado={
+    pending:"Tu solicitud está pendiente de revisión. No necesitas volver a enviarla.",
+    verified:"Tu empresa ya está verificada. No necesitas volver a enviar documentos; puedes publicar cargas reales y administrar tus publicaciones.",
+    rejected:"La solicitud fue rechazada. Revisa las observaciones, corrige los datos y adjunta nuevamente el documento para solicitar otra revisión.",
+    suspended:"La verificación de tu empresa está suspendida. Contacta a RUTA CARGA para recibir orientación.",
+    not_submitted:"La solicitud no se ha enviado. Completa los datos y adjunta el documento de soporte."
+  };
   estado.innerHTML='<span class="status '+escaparHTML(data.status)+'">'+
     escaparHTML(estados[data.status]||"Estado: "+data.status)+
     '</span>'+
-    (puedeReenviar
-      ?'<p class="small">La solicitud fue rechazada o quedó sin enviar. Corrige los datos si es necesario y adjunta nuevamente el documento para solicitar otra revisión.</p>'
-      :'<p class="small">Ya existe una solicitud asociada a esta cuenta. No se puede crear otra mientras esté pendiente, aprobada o suspendida.</p>')+
+    '<p class="small">'+escaparHTML(mensajesEstado[data.status]||"Consulta el estado de tu solicitud.")+'</p>'+
     (data.review_notes?'<p class="small"><b>Observaciones:</b> '+escaparHTML(data.review_notes)+'</p>':"");
 
+  formulario.classList.toggle("hidden",!puedeReenviar);
   formulario.querySelectorAll("input").forEach(input=>input.disabled=!puedeReenviar);
   boton.disabled=!puedeReenviar;
   boton.textContent=puedeReenviar?"Reenviar solicitud corregida":"Solicitud ya registrada";
@@ -1793,7 +1805,8 @@ $("guardarCargaReal").onclick=async()=>{
   if(!usuarioActual||!puedePublicarCargas){mensaje.textContent="Solo la cuenta de empresa verificada puede publicar cargas.";return;}
   const o=$("cargaOrigen").value.trim(),d=$("cargaDestino").value.trim(),f=$("cargaFecha").value,p=Number($("cargaPago").value);
   const t=$("cargaTipo").value,v=$("cargaVehiculo").value,description=$("cargaDescripcion").value.trim();
-  if(!o||!d||!f||!p||p<=0){mensaje.textContent="Completa origen, destino, fecha y pago válido.";return;}
+  if(!o||!d||!f||!Number.isSafeInteger(p)||p<=0){mensaje.textContent="Completa origen, destino, fecha y un pago entero válido mayor que cero.";return;}
+  if(f<fechaLocalISO()){mensaje.textContent="La fecha de cargue no puede estar en el pasado.";return;}
   boton.disabled=true;boton.textContent="Publicando...";mensaje.textContent="Guardando la carga...";
   try{
     const {data,error}=await supabaseClient.from("company_loads").insert({company_id:usuarioActual.id,origin_city:o,destination_city:d,cargo_type:t,vehicle_type:v,loading_date:f,payment:p,description:description||null,status:"published"})
