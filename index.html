@@ -408,7 +408,7 @@ async function cargarEmpresaDesdeSupabase(user){
 
   estado.textContent="Consultando solicitudes anteriores...";
   formulario.classList.remove("hidden");
-  boton.disabled=false;
+  boton.disabled=true;
   solicitudEmpresaExistente=null;
 
   const {data,error}=await supabaseClient
@@ -419,10 +419,14 @@ async function cargarEmpresaDesdeSupabase(user){
 
   if(error){
     estado.textContent="No se pudo consultar la solicitud: "+error.message;
+    formulario.querySelectorAll("input").forEach(input=>input.disabled=true);
     return;
   }
 
   if(!data){
+    formulario.querySelectorAll("input").forEach(input=>input.disabled=false);
+    boton.disabled=false;
+    boton.textContent="Enviar solicitud de verificación";
     estado.textContent="Todavía no has enviado una solicitud de verificación.";
     return;
   }
@@ -439,17 +443,19 @@ async function cargarEmpresaDesdeSupabase(user){
     suspended:"Verificación suspendida",
     not_submitted:"No enviada"
   };
+  const puedeReenviar=data.status==="rejected"||data.status==="not_submitted";
 
-  estado.innerHTML='<span class="status '+data.status+'">'+
-    (estados[data.status]||"Estado: "+escaparHTML(data.status))+
-    '</span><p class="small">Ya existe una solicitud asociada a esta cuenta. Por seguridad, este formulario no permite crear una segunda solicitud.</p>'+
-    (data.review_notes?'<p class="small"><b>Observaciones:</b> '+escaparHTML(data.review_notes)+'</p>':"");
+  estado.innerHTML='<span class="status '+escaparHTML(data.status)+'">'+
+    escaparHTML(estados[data.status]||"Estado: "+data.status)+'</span>'+
+    (data.review_notes?'<p class="small"><b>Observaciones:</b> '+escaparHTML(data.review_notes)+'</p>':"")+
+    (puedeReenviar
+      ?'<p class="small">Puedes corregir los datos, adjuntar un documento actualizado y reenviar la solicitud para revisión.</p>'
+      :'<p class="small">Ya existe una solicitud asociada a esta cuenta. El formulario queda bloqueado mientras se encuentra en revisión, aprobada o suspendida.</p>');
 
-  formulario.querySelectorAll("input").forEach(input=>input.disabled=true);
-  boton.disabled=true;
-  boton.textContent="Solicitud ya registrada";
+  formulario.querySelectorAll("input").forEach(input=>input.disabled=!puedeReenviar);
+  boton.disabled=!puedeReenviar;
+  boton.textContent=puedeReenviar?"Reenviar solicitud":"Solicitud ya registrada";
 }
-
 function escaparHTML(valor){
   return String(valor??"").replace(/[&<>"']/g,c=>({
     "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
@@ -1181,7 +1187,10 @@ $("enviarEmpresa").onclick=async()=>{
   const archivo=$("documentoEmpresa").files[0];
 
   if(!usuarioActual){mensaje.textContent="Debes iniciar sesión con Google.";return;}
-  if(solicitudEmpresaExistente){mensaje.textContent="Esta cuenta ya tiene una solicitud registrada.";return;}
+  if(solicitudEmpresaExistente && !["rejected","not_submitted"].includes(solicitudEmpresaExistente.status)){
+    mensaje.textContent="Esta cuenta ya tiene una solicitud que no permite reenvío.";
+    return;
+  }
   if(!razonSocial||!nit){mensaje.textContent="Completa la razón social y el NIT.";return;}
   if(!archivo){mensaje.textContent="Selecciona el documento de soporte de la empresa.";return;}
   if(archivo.size>10*1024*1024){mensaje.textContent="El documento supera el límite de 10 MB.";return;}
@@ -1195,7 +1204,7 @@ $("enviarEmpresa").onclick=async()=>{
   let rutaArchivo=null;
 
   try{
-    const nombreSeguro=archivo.name.normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-zA-Z0-9._-]/g,"_");
+    const nombreSeguro=archivo.name.normalize("NFD").replace(/[\\u0300-\\u036f]/g,"").replace(/[^a-zA-Z0-9._-]/g,"_");
     rutaArchivo=usuarioActual.id+"/"+Date.now()+"_"+nombreSeguro;
 
     const {error:errorSubida}=await supabaseClient.storage.from("company-documents")
@@ -1205,12 +1214,11 @@ $("enviarEmpresa").onclick=async()=>{
 
     mensaje.textContent="Documento cargado. Registrando solicitud...";
 
-    const {error:errorRegistro}=await supabaseClient.from("company_verifications").insert({
-      user_id:usuarioActual.id,
-      legal_name:razonSocial,
-      nit:nit,
-      transport_authorization_reference:referencia||null,
-      document_storage_path:rutaArchivo
+    const {error:errorRegistro}=await supabaseClient.rpc("submit_company_verification",{
+      p_legal_name:razonSocial,
+      p_nit:nit,
+      p_transport_authorization_reference:referencia||null,
+      p_document_storage_path:rutaArchivo
     });
 
     if(errorRegistro){
@@ -1219,16 +1227,20 @@ $("enviarEmpresa").onclick=async()=>{
       throw new Error("No se pudo registrar la solicitud: "+errorRegistro.message);
     }
 
+    $("documentoEmpresa").value="";
     mensaje.textContent="¡Solicitud enviada! Tu empresa quedó registrada para revisión. Todavía no está verificada.";
     await cargarEmpresaDesdeSupabase(usuarioActual);
   }catch(error){
     mensaje.textContent=error.message||"Ocurrió un error al enviar la solicitud.";
   }finally{
-    boton.disabled=!!solicitudEmpresaExistente;
-    if(!solicitudEmpresaExistente) boton.textContent="Enviar solicitud de verificación";
+    const puedeReenviar=solicitudEmpresaExistente &&
+      ["rejected","not_submitted"].includes(solicitudEmpresaExistente.status);
+    boton.disabled=!!solicitudEmpresaExistente&&!puedeReenviar;
+    boton.textContent=puedeReenviar
+      ?"Reenviar solicitud"
+      :(solicitudEmpresaExistente?"Solicitud ya registrada":"Enviar solicitud de verificación");
   }
 };
-
 function normalizarWhatsApp(valor){
   let numero=String(valor||"").replace(/\D/g,"");
   if(numero.length===10) numero="57"+numero;
