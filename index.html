@@ -252,7 +252,7 @@ input:focus,select:focus,textarea:focus{border-color:#c51d32;box-shadow:0 0 0 4p
 <button class="tab active" data-tab="buscar">Buscar cargas</button>
 <button class="tab" data-tab="retorno">Carga de regreso</button>
 <button class="tab" data-tab="rentabilidad">Rentabilidad</button>
-<button class="tab" data-tab="perfil">Mi vehículo</button>
+<button class="tab" id="tabPerfil" data-tab="perfil">Mi vehículo</button>
 <button class="tab hidden" id="tabVerificacionConductor" data-tab="verificacionConductor">Verificar conductor</button>
 <button class="tab hidden" id="tabMisSolicitudes" data-tab="misSolicitudes">Mis solicitudes</button>
 <button class="tab" id="tabEmpresa" data-tab="empresa">Empresa transportadora</button>
@@ -314,11 +314,14 @@ input:focus,select:focus,textarea:focus{border-color:#c51d32;box-shadow:0 0 0 4p
 
 <section id="perfil" class="view hidden">
 <div class="panel">
-<h2>Mi tractocamión</h2>
-<p class="small">Tus datos quedarán guardados en tu cuenta de RUTA CARGA.</p>
+<h2 id="tituloPerfilFlota">Mi tractocamión</h2>
+<p class="small">Administra los vehículos asociados a esta única cuenta.</p>
+<div class="actions"><select id="vehiculoSeleccionado" aria-label="Seleccionar vehículo" style="max-width:320px"><option value="">Nuevo vehículo</option></select><button class="btn secondary" id="nuevoVehiculo" type="button">Agregar vehículo</button></div>
+<div id="listaVehiculosCuenta" class="cards" style="margin:12px 0"></div>
 <div class="grid">
 <div><label>Nombre del conductor</label><input id="conductor" placeholder="Nombre completo"></div>
-<div><label>Placa</label><input id="placa" placeholder="ABC123" maxlength="6"></div>
+<div><label>Placa del vehículo</label><input id="placa" placeholder="ABC123" maxlength="6"></div>
+<div><label>Placa del remolque (si aplica)</label><input id="placaRemolque" placeholder="ABC123" maxlength="6"></div>
 <div><label>Configuración</label><select id="config"><option>2S1</option><option>2S2</option><option>3S2</option><option>3S3</option><option>Otra</option></select></div>
 <div><label>Carrocería</label><select id="carroceria"><option>Estacas</option><option>Furgón</option><option>Planchón</option><option>Portacontenedor</option><option>Volco</option><option>Tanque</option><option>Refrigerada</option></select></div>
 <div><label>Ciudad habitual</label><select id="ciudad"><option>Cúcuta</option><option>Bogotá</option><option>Medellín</option><option>Bucaramanga</option><option>Cali</option><option>Barranquilla</option></select></div>
@@ -397,8 +400,7 @@ input:focus,select:focus,textarea:focus{border-color:#c51d32;box-shadow:0 0 0 4p
 <h2>Publicar una carga real</h2>
 <p class="small">Disponible únicamente para empresas transportadoras verificadas.</p>
 <div class="grid">
-<div><label>Origen *</label><input id="cargaOrigen" maxlength="100" required autocomplete="address-level2" placeholder="Ciudad de origen"></div>
-<div><label>Destino *</label><input id="cargaDestino" maxlength="100" required autocomplete="address-level2" placeholder="Ciudad de destino"></div>
+<div><label>Origen *</label><input id="cargaOrigen" maxlength="100" required autocomplete="address-level2" placeholder="Ciudad de origen"></div><div><label>Destino *</label><input id="cargaDestino" maxlength="100" required autocomplete="address-level2" placeholder="Ciudad de destino"></div>
 <div><label>Tipo de carga *</label><select id="cargaTipo" required><option>General</option><option>Contenedor</option><option>Granel</option><option>Refrigerada</option><option>Estibas</option></select></div>
 <div><label>Vehículo requerido</label><select id="cargaVehiculo"><option>Tractocamión</option><option>Turbo</option><option>Sencillo</option><option>Patineta</option><option>Camión rígido</option></select></div>
 <div><label>Fecha de cargue *</label><input id="cargaFecha" type="date" required></div>
@@ -565,6 +567,7 @@ let empresaVerificada=false;
 let puedePublicarCargas=false;
 let conductorVerificado=false;
 let cargasReales=[];
+let vehiculosCuenta=[];
 
 document.querySelectorAll("[data-account-role]").forEach(boton=>{
   boton.addEventListener("click",async()=>{
@@ -603,6 +606,16 @@ googleLogout.addEventListener("click",async()=>{
   if(error) estadoAcceso.textContent="No se pudo cerrar sesión: "+error.message;
 });
 
+function limpiarFormularioVehiculo(){$("placa").value="";$("placaRemolque").value="";$("config").value="3S3";$("carroceria").value="Estacas";}
+function pintarSelectorVehiculos(){
+ const select=$("vehiculoSeleccionado"),actual=select.value;
+ select.innerHTML='<option value="">Nuevo vehículo</option>'+vehiculosCuenta.map(v=>'<option value="'+escaparHTML(v.id)+'">'+escaparHTML(v.plate)+(v.trailer_plate?' · Remolque '+v.trailer_plate:'')+'</option>').join("");
+ if(actual&&vehiculosCuenta.some(v=>v.id===actual))select.value=actual;
+ $("listaVehiculosCuenta").innerHTML=vehiculosCuenta.length?vehiculosCuenta.map(v=>'<article class="load"><b>'+escaparHTML(v.plate)+'</b>'+(v.trailer_plate?'<p class="small">Remolque: '+escaparHTML(v.trailer_plate)+'</p>':'')+'<p class="small">'+escaparHTML(v.configuration)+' · '+escaparHTML(v.body_type||"Carrocería no indicada")+' · '+escaparHTML(v.city)+'</p></article>').join(""):'<div class="empty">Todavía no hay vehículos registrados.</div>';
+}
+function cargarVehiculoEnFormulario(id){const v=vehiculosCuenta.find(x=>x.id===id);if(!v){limpiarFormularioVehiculo();return;}$("placa").value=v.plate||"";$("placaRemolque").value=v.trailer_plate||"";$("config").value=v.configuration||"3S3";$("carroceria").value=v.body_type||"Estacas";if(v.city)$("ciudad").value=v.city;}
+$("vehiculoSeleccionado").addEventListener("change",()=>cargarVehiculoEnFormulario($("vehiculoSeleccionado").value));
+$("nuevoVehiculo").addEventListener("click",()=>{$("vehiculoSeleccionado").value="";limpiarFormularioVehiculo();$("mensajePerfil").textContent="Completa los datos del nuevo vehículo y pulsa Guardar perfil.";$("placa").focus();});
 async function cargarPerfilDesdeSupabase(user){
   const mensaje=$("mensajePerfil");
   mensaje.textContent="Consultando tus datos guardados...";
@@ -622,26 +635,18 @@ async function cargarPerfilDesdeSupabase(user){
 
   const {data:vehiculos,error:errorVehiculo}=await supabaseClient
     .from("vehicles")
-    .select("id,plate,configuration,body_type,city")
+    .select("id,plate,trailer_plate,configuration,body_type,city,availability,created_at")
     .eq("owner_id",user.id)
-    .order("created_at",{ascending:false})
-    .limit(1);
+    .order("created_at",{ascending:false});
 
   if(errorVehiculo){
     mensaje.textContent="Perfil consultado, pero no se pudo consultar el vehículo: "+errorVehiculo.message;
     return;
   }
 
-  if(vehiculos&&vehiculos.length>0){
-    const v=vehiculos[0];
-    $("placa").value=v.plate||"";
-    $("config").value=v.configuration||"3S3";
-    $("carroceria").value=v.body_type||"Estacas";
-    if(v.city) $("ciudad").value=v.city;
-    mensaje.textContent="Tus datos fueron recuperados de Supabase.";
-  }else{
-    mensaje.textContent="Tu cuenta está lista. Registra tu tractocamión para guardarlo.";
-  }
+  vehiculosCuenta=vehiculos||[];
+  pintarSelectorVehiculos();
+  if(vehiculosCuenta.length){$("vehiculoSeleccionado").value=vehiculosCuenta[0].id;cargarVehiculoEnFormulario(vehiculosCuenta[0].id);mensaje.textContent="Se recuperaron "+vehiculosCuenta.length+" vehículo(s) de tu cuenta.";}else{$("vehiculoSeleccionado").value="";limpiarFormularioVehiculo();mensaje.textContent="Tu cuenta está lista. Registra tu primer vehículo.";}
 }
 
 async function cargarEmpresaDesdeSupabase(user){
@@ -797,8 +802,7 @@ async function cargarSolicitudesConductoresAdmin(){
   }
 
   mensaje.textContent="Consultando solicitudes de conductores...";
-  lista.innerHTML="";
-  const filtro=$("filtroConductoresAdmin").value;
+  lista.innerHTML="";  const filtro=$("filtroConductoresAdmin").value;
   let consulta=supabaseClient.from("driver_verifications")
     .select("user_id,document_storage_path,status,submitted_at,review_notes,reviewed_at,reviewed_by")
     .order("submitted_at",{ascending:false});
@@ -1020,7 +1024,7 @@ function configurarPanelPorRol(){
     buscar:esAdministrador||esConductor||esPropietario,
     retorno:esAdministrador,
     rentabilidad:esAdministrador,
-    perfil:esAdministrador||esConductor||esPropietario,
+    perfil:esAdministrador||esConductor||esPropietario||esEmpresa,
     verificacionConductor:esAdministrador||esConductor,
     misSolicitudes:esConductor,
     empresa:esAdministrador||esEmpresa,
@@ -1033,6 +1037,8 @@ function configurarPanelPorRol(){
     tab.classList.toggle("hidden",!tabs[key]);
   });
   $("panelRegistroEmpresa").classList.toggle("hidden",!esEmpresa||empresaVerificada);
+  $("tituloPerfilFlota").textContent=esEmpresa?"Flota de vehículos de la empresa":esPropietario?"Mi flota de vehículos":"Mi tractocamión";
+  $("tabPerfil").textContent=esEmpresa?"Mi flota":"Mi vehículo";
   const activa=document.querySelector(".tab.active");
   if(!activa||activa.classList.contains("hidden")){
     const preferida=esAdministrador?"administracion":esEmpresa?"empresa":"buscar";
@@ -1197,8 +1203,7 @@ async function cargarSolicitudesAdmin(){
 
   if(error){
     mensaje.textContent="No se pudieron consultar las solicitudes: "+error.message;
-    return;
-  }
+    return;  }
 
   if(!data||data.length===0){
     mensaje.textContent="No hay solicitudes en esta categoría.";
@@ -1597,8 +1602,7 @@ document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{
 });
 
 $("filtrar").onclick=()=>{
-  const o=$("origen").value,d=$("destino").value,t=$("tipo").value,f=$("fecha").value;
-  pintar(todas().filter(x=>coincide(x.o,o)&&coincide(x.d,d)&&(!t||x.t===t)&&(!f||x.f===f)));
+  const o=$("origen").value,d=$("destino").value,t=$("tipo").value,f=$("fecha").value;  pintar(todas().filter(x=>coincide(x.o,o)&&coincide(x.d,d)&&(!t||x.t===t)&&(!f||x.f===f)));
 };
 
 $("limpiar").onclick=()=>{
@@ -1651,28 +1655,30 @@ $("guardarPerfil").onclick=async()=>{
 
     if(actualizarPerfilError) throw new Error("Error guardando los datos personales: "+actualizarPerfilError.message);
 
+    const idVehiculo=$("vehiculoSeleccionado").value;
     const {data:vehiculos,error:consultaVehiculoError}=await supabaseClient
       .from("vehicles").select("id").eq("owner_id",usuarioActual.id)
-      .order("created_at",{ascending:false}).limit(1);
+      .eq("id",idVehiculo||"00000000-0000-0000-0000-000000000000").limit(1);
 
     if(consultaVehiculoError) throw new Error("Error consultando el vehículo: "+consultaVehiculoError.message);
 
     const datosVehiculo={
-      owner_id:usuarioActual.id,plate:placa,configuration:config,
+      owner_id:usuarioActual.id,plate:placa,trailer_plate:$("placaRemolque").value.trim().toUpperCase()||null,configuration:config,
       body_type:carroceria,city:ciudad,availability:"available"
     };
 
-    if(vehiculos&&vehiculos.length>0){
+    if(idVehiculo&&vehiculos&&vehiculos.length>0){
       const {error}=await supabaseClient.from("vehicles")
-        .update({plate:placa,configuration:config,body_type:carroceria,city:ciudad,availability:"available"})
-        .eq("id",vehiculos[0].id).eq("owner_id",usuarioActual.id);
+        .update({plate:placa,trailer_plate:datosVehiculo.trailer_plate,configuration:config,body_type:carroceria,city:ciudad,availability:"available"})
+        .eq("id",idVehiculo).eq("owner_id",usuarioActual.id);
       if(error) throw new Error("Error actualizando el vehículo: "+error.message);
     }else{
       const {error}=await supabaseClient.from("vehicles").insert(datosVehiculo);
       if(error) throw new Error("Error registrando el vehículo: "+error.message);
     }
 
-    mensaje.textContent="¡Perfecto! Tu perfil y tu tractocamión quedaron guardados en Supabase.";
+    mensaje.textContent="¡Perfecto! Tus datos y el vehículo quedaron guardados en tu cuenta.";
+    await cargarPerfilDesdeSupabase(usuarioActual);
   }catch(error){
     mensaje.textContent=error.message||"Ocurrió un error al guardar.";
   }finally{
@@ -1995,10 +2001,18 @@ document.addEventListener("click",async(event)=>{
   const mensaje=boton.closest(".load").querySelector(".interesMensaje");
   if(!usuarioActual){mensaje.textContent="Inicia sesión para manifestar interés.";return;}
   if(!conductorVerificado){mensaje.textContent="Para manifestar interés debes tener aprobada tu verificación de conductor. Abre la sección Verificación de conductor y envía tus documentos.";return;}
+  let vehiculoSeleccionado=null;
+  if(vehiculosCuenta.length===1) vehiculoSeleccionado=vehiculosCuenta[0];
+  else if(vehiculosCuenta.length>1){
+    const opciones=vehiculosCuenta.map((v,i)=>(i+1)+". "+v.plate+(v.trailer_plate?" / remolque "+v.trailer_plate:"")).join("\\n");
+    const eleccion=prompt("¿Con cuál vehículo deseas ofrecer el servicio?\\n"+opciones+"\\nEscribe el número:");
+    if(eleccion===null)return;const indice=Number(eleccion)-1;
+    if(!Number.isInteger(indice)||indice<0||indice>=vehiculosCuenta.length){mensaje.textContent="Selecciona un número de vehículo válido.";return;}
+    vehiculoSeleccionado=vehiculosCuenta[indice];
+  }
   const nombre=prompt("¿Cuál es tu nombre completo?");
   if(nombre===null)return;
-  if(nombre.trim().length<2){mensaje.textContent="Escribe tu nombre completo.";return;}
-  const telefono=prompt("¿Cuál es tu WhatsApp? Incluye indicativo si no es Colombia.");
+  if(nombre.trim().length<2){mensaje.textContent="Escribe tu nombre completo.";return;}  const telefono=prompt("¿Cuál es tu WhatsApp? Incluye indicativo si no es Colombia.");
   if(telefono===null)return;
   const numero=normalizarWhatsApp(telefono);
   if(!numero){mensaje.textContent="Escribe un WhatsApp válido de 10 a 15 dígitos.";return;}
@@ -2013,6 +2027,7 @@ document.addEventListener("click",async(event)=>{
       transporter_id:usuarioActual.id,
       transporter_name:nombre.trim(),
       transporter_whatsapp:numero,
+      vehicle_id:vehiculoSeleccionado?.id||null,
       consent_to_share:true,
       status:"pending"
     });
