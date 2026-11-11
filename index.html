@@ -279,7 +279,7 @@ input:focus,select:focus,textarea:focus{border-color:#1677c8;box-shadow:0 0 0 4p
 
 <section class="panel" id="panelRegistroEmpresa">
 <h2>¿Tienes una empresa transportadora?</h2>
-<p class="small">Puedes solicitar el registro con tu cuenta actual de Google. <b>No necesitas crear otra cuenta ni cambiar previamente tu perfil a “Empresa”.</b> Completa la razón social, el NIT y adjunta un documento oficial de soporte. RUTA CARGA revisará la solicitud y, si la aprueba, habilitará la opción para publicar cargas reales.</p>
+<p class="small">Puedes solicitar el registro con tu cuenta actual de Google. <b>No necesitas crear otra cuenta ni cambiar previamente tu perfil a “Empresa”.</b> Completa la razón social y el NIT. No necesitas adjuntar archivos. RUTA CARGA revisará la solicitud y, si la aprueba, habilitará la opción para publicar cargas reales.</p>
 <div class="actions">
 <button class="btn" id="abrirRegistroEmpresa" type="button">Solicitar registro de empresa</button>
 </div>
@@ -372,15 +372,11 @@ input:focus,select:focus,textarea:focus{border-color:#1677c8;box-shadow:0 0 0 4p
 <section id="verificacionConductor" class="view hidden">
 <div class="panel">
 <h2>Verificación de conductor</h2>
-<p class="small">Carga un documento de identidad y tu licencia de conducción. Puedes adjuntar un PDF con ambos documentos o una imagen. Los archivos se guardan de forma privada.</p>
+<p class="small">Solicita tu verificación con los datos básicos de tu cuenta. No necesitas adjuntar archivos ni fotografías.</p>
 <div id="estadoVerificacionConductor" aria-live="polite" class="small">Consultando tu estado de verificación...</div>
 <div id="formularioVerificacionConductor">
-<div style="margin-top:14px">
-<label for="documentoConductor">Documento del conductor (PDF, JPG o PNG; máximo 10 MB)</label>
-<input id="documentoConductor" type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png">
-</div>
-<div class="notice" style="margin-top:14px">Envía un archivo legible. Si necesitas adjuntar cédula y licencia por separado, reúnelas en un solo PDF para esta primera versión.</div>
-<button class="btn" id="enviarVerificacionConductor" type="button">Enviar documentos para revisión</button>
+<div class="notice" style="margin-top:14px">RUTA CARGA revisará tu solicitud con los datos de tu perfil. No necesitas adjuntar archivos.</div>
+<button class="btn" id="enviarVerificacionConductor" type="button">Solicitar verificación</button>
 <p class="small" id="mensajeVerificacionConductor" aria-live="polite"></p>
 </div>
 </div>
@@ -389,16 +385,16 @@ input:focus,select:focus,textarea:focus{border-color:#1677c8;box-shadow:0 0 0 4p
 <section id="empresa" class="view hidden">
 <div class="panel">
 <h2 id="tituloEstadoEmpresa">Registro de empresa transportadora</h2>
-<p class="small" id="descripcionEstadoEmpresa">Completa los datos de tu empresa y adjunta un documento de soporte para solicitar la verificación de RUTA CARGA.</p>
+<p class="small" id="descripcionEstadoEmpresa">Completa los datos básicos de tu empresa para solicitar la verificación de RUTA CARGA.</p>
 <div id="estadoEmpresa" class="small" aria-live="polite">Consultando solicitudes anteriores...</div>
 <div id="formularioEmpresa">
 <div class="formgrid">
 <div><label for="razonSocial">Razón social *</label><input id="razonSocial" maxlength="180" placeholder="Nombre legal de la empresa"></div>
 <div><label for="nitEmpresa">NIT *</label><input id="nitEmpresa" maxlength="30" placeholder="NIT de la empresa"></div>
 <div style="grid-column:1/-1"><label for="referenciaAutorizacion">Referencia de autorización o habilitación</label><input id="referenciaAutorizacion" maxlength="180" placeholder="Número o referencia, si aplica"></div>
-<div style="grid-column:1/-1"><label for="documentoEmpresa">Documento de soporte * (PDF, JPG o PNG; máximo 10 MB)</label><input id="documentoEmpresa" type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"></div>
+
 </div>
-<div class="notice" style="margin-top:14px">La documentación será privada. Enviar la solicitud no significa que la empresa esté aprobada. La verificación debe realizarla RUTA CARGA.</div>
+<div class="notice" style="margin-top:14px">Enviar la solicitud no significa que la empresa esté aprobada. RUTA CARGA revisará los datos registrados.</div>
 <button class="btn" id="enviarEmpresa" type="button">Enviar solicitud de verificación</button>
 <p class="small" id="mensajeEmpresa" aria-live="polite"></p>
 </div>
@@ -506,7 +502,7 @@ input:focus,select:focus,textarea:focus{border-color:#1677c8;box-shadow:0 0 0 4p
 </div>
 <div class="panel">
 <h2>Aprobación de propietarios y vehículos</h2>
-<p class="small">Revisa el perfil y los datos del vehículo registrado. La aprobación habilita al propietario en RUTA CARGA. Para aprobar, verifica previamente la documentación por el canal definido por la plataforma.</p>
+<p class="small">Revisa el nombre, identificación, teléfono y datos del vehículo registrado. La aprobación habilita al propietario en RUTA CARGA.</p>
 <div class="actions"><button class="btn secondary" id="actualizarPropietariosAdmin" type="button">Actualizar propietarios</button><select id="filtroPropietariosAdmin" style="max-width:220px"><option value="pending">Pendientes de aprobación</option><option value="verified">Aprobados</option><option value="rejected">Rechazados</option><option value="all">Todos</option></select></div>
 <p class="small" id="mensajePropietariosAdmin" aria-live="polite">Consultando propietarios...</p>
 <div class="cards" id="listaPropietariosAdmin"></div>
@@ -521,7 +517,7 @@ input:focus,select:focus,textarea:focus{border-color:#1677c8;box-shadow:0 0 0 4p
 </div>
 <div class="panel">
 <h2>Verificación de conductores</h2>
-<p class="small">Revisa los documentos de los conductores y aprueba o rechaza las solicitudes. Solo administradores verificados pueden realizar estas acciones.</p>
+<p class="small">Revisa los datos de los conductores y aprueba o rechaza las solicitudes. Solo administradores verificados pueden realizar estas acciones.</p>
 <div class="actions">
 <button class="btn" id="recargarConductoresAdmin" type="button">Actualizar conductores</button>
 <select id="filtroConductoresAdmin" style="max-width:220px">
@@ -537,7 +533,7 @@ input:focus,select:focus,textarea:focus{border-color:#1677c8;box-shadow:0 0 0 4p
 </div>
 <div class="panel">
 <h2>Administración de empresas</h2>
-<p class="small">Revisa los documentos y decide si las solicitudes cumplen los requisitos de RUTA CARGA.</p>
+<p class="small">Revisa los datos de las empresas y decide si las solicitudes cumplen los requisitos de RUTA CARGA.</p>
 <div class="actions">
 <button class="btn" id="recargarAdmin" type="button">Actualizar solicitudes</button>
 <select id="filtroAdmin" style="max-width:220px">
@@ -698,7 +694,7 @@ async function cargarEmpresaDesdeSupabase(user){
 
   const {data,error}=await supabaseClient
     .from("company_verifications")
-    .select("legal_name,nit,transport_authorization_reference,document_storage_path,status,submitted_at,review_notes")
+    .select("legal_name,nit,transport_authorization_reference,status,submitted_at,review_notes")
     .eq("user_id",user.id)
     .maybeSingle();
 
@@ -739,14 +735,14 @@ async function cargarEmpresaDesdeSupabase(user){
     tituloEmpresa.textContent=data.status==="verified"?"Verificación de empresa": "Registro de empresa transportadora";
     descripcionEmpresa.textContent=data.status==="verified"
       ?"Consulta el estado de verificación y administra el contacto comercial de tu empresa."
-      :"Completa los datos de tu empresa y adjunta un documento de soporte para solicitar la verificación de RUTA CARGA.";
+      :"Completa los datos básicos de tu empresa para solicitar la verificación de RUTA CARGA.";
   }
   const mensajesEstado={
     pending:"Tu solicitud está pendiente de revisión. No necesitas volver a enviarla.",
-    verified:"Tu empresa ya está verificada. No necesitas volver a enviar documentos; puedes publicar cargas reales y administrar tus publicaciones.",
-    rejected:"La solicitud fue rechazada. Revisa las observaciones, corrige los datos y adjunta nuevamente el documento para solicitar otra revisión.",
+    verified:"Tu empresa ya está verificada. puedes publicar cargas reales y administrar tus publicaciones.",
+    rejected:"La solicitud fue rechazada. Revisa las observaciones, corrige los datos y presenta nuevamente la solicitud.",
     suspended:"La verificación de tu empresa está suspendida. Contacta a RUTA CARGA para recibir orientación.",
-    not_submitted:"La solicitud no se ha enviado. Completa los datos y adjunta el documento de soporte."
+    not_submitted:"La solicitud no se ha enviado. Completa los datos básicos para solicitar la verificación."
   };
   estado.innerHTML='<span class="status '+escaparHTML(data.status)+'">'+
     escaparHTML(estados[data.status]||"Estado: "+data.status)+
@@ -776,12 +772,12 @@ async function cargarSolicitudConductor(user){
   estado.textContent="Consultando tu solicitud de verificación...";
   formulario.classList.remove("hidden");
   boton.disabled=false;
-  boton.textContent="Enviar documentos para revisión";
+  boton.textContent="Solicitar verificación";
   mensaje.textContent="";
 
   const {data,error}=await supabaseClient
     .from("driver_verifications")
-    .select("document_storage_path,status,submitted_at,review_notes,reviewed_at")
+    .select("status,submitted_at,review_notes,reviewed_at")
     .eq("user_id",user.id)
     .maybeSingle();
 
@@ -793,7 +789,7 @@ async function cargarSolicitudConductor(user){
 
   if(!data){
     conductorVerificado=false;
-    estado.innerHTML='<span class="status">Sin solicitud</span><p class="small">Todavía no has enviado tus documentos.</p>';
+    estado.innerHTML='<span class="status">Sin solicitud</span><p class="small">Todavía no has solicitado la verificación.</p>';
     pintar();
     return;
   }
@@ -821,7 +817,7 @@ async function cargarSolicitudConductor(user){
   }else if(data.status==="suspended"){
     mensaje.textContent="Tu verificación está suspendida. Comunícate con RUTA CARGA.";
   }else if(data.status==="rejected"){
-    mensaje.textContent="Puedes corregir los documentos y presentar una nueva solicitud.";
+    mensaje.textContent="Puedes corregir los datos y presentar una nueva solicitud.";
   }
   pintar();
 }
@@ -841,7 +837,7 @@ async function cargarSolicitudesConductoresAdmin(){
   mensaje.textContent="Consultando solicitudes de conductores...";
   lista.innerHTML="";  const filtro=$("filtroConductoresAdmin").value;
   let consulta=supabaseClient.from("driver_verifications")
-    .select("user_id,document_storage_path,status,submitted_at,review_notes,reviewed_at,reviewed_by")
+    .select("user_id,status,submitted_at,review_notes,reviewed_at,reviewed_by")
     .order("submitted_at",{ascending:false});
   if(filtro!=="all") consulta=consulta.eq("status",filtro);
 
@@ -870,33 +866,12 @@ async function cargarSolicitudesConductoresAdmin(){
       '<p class="small"><b>Usuario:</b> '+escaparHTML(solicitud.user_id)+'</p>'+
       '<p class="small"><b>Fecha de envío:</b> '+escaparHTML(fecha)+'</p>'+
       (solicitud.review_notes?'<p class="small"><b>Observaciones:</b> '+escaparHTML(solicitud.review_notes)+'</p>':"")+
-      '<div class="actions"><button class="btn secondary documentoConductorBtn" type="button">Abrir documento privado</button></div>'+
       (solicitud.status==="pending"?
         '<div class="actions"><button class="btn success aprobarConductorBtn" type="button">Aprobar conductor</button><button class="btn danger rechazarConductorBtn" type="button">Rechazar solicitud</button></div>':"")+
       '<p class="small resultadoConductorAdmin" aria-live="polite"></p>';
     lista.appendChild(tarjeta);
 
-    tarjeta.querySelector(".documentoConductorBtn").addEventListener("click",async()=>{
-      const btn=tarjeta.querySelector(".documentoConductorBtn");
-      const resultado=tarjeta.querySelector(".resultadoConductorAdmin");
-      btn.disabled=true;
-      resultado.textContent="Generando enlace privado temporal...";
-      try{
-        const {data:archivo,error:archivoError}=await supabaseClient.storage
-          .from("driver-documents")
-          .createSignedUrl(solicitud.document_storage_path,300);
-        if(archivoError) throw archivoError;
-        if(!archivo?.signedUrl) throw new Error("No se recibió el enlace del documento.");
-        const ventana=window.open(archivo.signedUrl,"_blank","noopener,noreferrer");
-        resultado.textContent=ventana
-          ?"Documento abierto. El enlace temporal vence en 5 minutos."
-          :"El navegador bloqueó la ventana. Permite ventanas emergentes e inténtalo de nuevo.";
-      }catch(e){
-        resultado.textContent="No se pudo abrir el documento: "+e.message;
-      }finally{
-        btn.disabled=false;
-      }
-    });
+
 
     const aprobar=tarjeta.querySelector(".aprobarConductorBtn");
     if(aprobar) aprobar.addEventListener("click",async()=>{
@@ -942,55 +917,17 @@ $("recargarConductoresAdmin").addEventListener("click",cargarSolicitudesConducto
 $("filtroConductoresAdmin").addEventListener("change",cargarSolicitudesConductoresAdmin);
 
 $("enviarVerificacionConductor").addEventListener("click",async()=>{
-  const boton=$("enviarVerificacionConductor");
-  const mensaje=$("mensajeVerificacionConductor");
-  const archivo=$("documentoConductor").files[0];
-
+  const boton=$("enviarVerificacionConductor"),mensaje=$("mensajeVerificacionConductor");
   if(!usuarioActual){mensaje.textContent="Debes iniciar sesión con Google.";return;}
-  if(!["driver","owner","owner_driver"].includes(rolUsuario)){
-    mensaje.textContent="Esta cuenta no tiene un rol habilitado para verificación de conductor.";
-    return;
-  }
-  if(!archivo){mensaje.textContent="Selecciona el documento que vas a enviar.";return;}
-  if(archivo.size>10*1024*1024){mensaje.textContent="El documento supera el límite de 10 MB.";return;}
-  if(!["application/pdf","image/jpeg","image/png"].includes(archivo.type)){
-    mensaje.textContent="Solo se permiten archivos PDF, JPG o PNG.";
-    return;
-  }
-
-  boton.disabled=true;
-  boton.textContent="Enviando...";
-  mensaje.textContent="Cargando documento privado...";
-  let rutaArchivo=null;
+  if(!["driver","owner","owner_driver"].includes(rolUsuario)){mensaje.textContent="Esta cuenta no tiene un rol habilitado para verificación de conductor.";return;}
+  boton.disabled=true;boton.textContent="Enviando solicitud...";mensaje.textContent="Registrando tu solicitud...";
   try{
-    const nombreSeguro=archivo.name.normalize("NFD")
-      .replace(/[\u0300-\u036f]/g,"")
-      .replace(/[^a-zA-Z0-9._-]/g,"_");
-    rutaArchivo=usuarioActual.id+"/"+Date.now()+"_"+nombreSeguro;
-
-    const {error:errorSubida}=await supabaseClient.storage.from("driver-documents")
-      .upload(rutaArchivo,archivo,{contentType:archivo.type,upsert:false});
-    if(errorSubida) throw new Error("No se pudo cargar el documento: "+errorSubida.message);
-
-    mensaje.textContent="Documento cargado. Registrando solicitud...";
-    const {error:errorRegistro}=await supabaseClient.rpc("submit_driver_verification",{
-      p_document_storage_path:rutaArchivo
-    });
-    if(errorRegistro){
-      await supabaseClient.storage.from("driver-documents").remove([rutaArchivo]);
-      rutaArchivo=null;
-      throw new Error("No se pudo registrar la solicitud: "+errorRegistro.message);
-    }
-
-    $("documentoConductor").value="";
-    mensaje.textContent="¡Solicitud enviada! Tus documentos quedaron pendientes de revisión.";
+    const {error}=await supabaseClient.rpc("submit_driver_verification",{p_document_storage_path:null});
+    if(error)throw new Error("No se pudo registrar la solicitud: "+error.message);
+    mensaje.textContent="¡Solicitud enviada! RUTA CARGA revisará los datos de tu perfil.";
     await cargarSolicitudConductor(usuarioActual);
-  }catch(error){
-    mensaje.textContent=error.message||"Ocurrió un error al enviar la solicitud.";
-  }finally{
-    boton.disabled=false;
-    boton.textContent="Enviar documentos para revisión";
-  }
+  }catch(error){mensaje.textContent=error.message||"Ocurrió un error al enviar la solicitud.";}
+  finally{boton.disabled=false;boton.textContent="Solicitar verificación";}
 });
 
 async function comprobarAdministrador(user){
@@ -1231,7 +1168,7 @@ async function cargarSolicitudesAdmin(){
 
   let consulta=supabaseClient
     .from("company_verifications")
-    .select("user_id,legal_name,nit,transport_authorization_reference,document_storage_path,status,submitted_at,review_notes,reviewed_at,reviewed_by")
+    .select("user_id,legal_name,nit,transport_authorization_reference,status,submitted_at,review_notes,reviewed_at,reviewed_by")
     .order("submitted_at",{ascending:false});
 
   if(filtro!=="all") consulta=consulta.eq("status",filtro);
@@ -1287,32 +1224,7 @@ async function cargarSolicitudesAdmin(){
 
     lista.appendChild(tarjeta);
 
-    tarjeta.querySelector(".documentoBtn").addEventListener("click",async()=>{
-      const btn=tarjeta.querySelector(".documentoBtn");
-      const resultado=tarjeta.querySelector(".resultadoAccion");
-      btn.disabled=true;
-      resultado.textContent="Generando enlace privado temporal...";
 
-      try{
-        const {data:archivo,error:archivoError}=await supabaseClient.storage
-          .from("company-documents")
-          .createSignedUrl(solicitud.document_storage_path,300);
-
-        if(archivoError) throw archivoError;
-        if(!archivo?.signedUrl) throw new Error("No se recibió el enlace del documento.");
-
-        const ventana=window.open(archivo.signedUrl,"_blank","noopener,noreferrer");
-        if(!ventana){
-          resultado.textContent="El navegador bloqueó la ventana. Permite ventanas emergentes e inténtalo de nuevo.";
-        }else{
-          resultado.textContent="Documento abierto. El enlace temporal vence en 5 minutos.";
-        }
-      }catch(e){
-        resultado.textContent="No se pudo abrir el documento: "+e.message;
-      }finally{
-        btn.disabled=false;
-      }
-    });
 
     const aprobar=tarjeta.querySelector(".aprobarBtn");
     if(aprobar){
@@ -1724,70 +1636,25 @@ $("guardarPerfil").onclick=async()=>{
   }
 };
 
+
+
 $("enviarEmpresa").onclick=async()=>{
   const boton=$("enviarEmpresa"),mensaje=$("mensajeEmpresa");
-  const razonSocial=$("razonSocial").value.trim();
-  const nit=$("nitEmpresa").value.trim();
+  const razonSocial=$("razonSocial").value.trim(),nit=$("nitEmpresa").value.trim();
   const referencia=$("referenciaAutorizacion").value.trim();
-  const archivo=$("documentoEmpresa").files[0];
-  const puedeReenviar=!!solicitudEmpresaExistente
-    && ["rejected","not_submitted"].includes(solicitudEmpresaExistente.status);
-
+  const puedeReenviar=!!solicitudEmpresaExistente&&["rejected","not_submitted"].includes(solicitudEmpresaExistente.status);
   if(!usuarioActual){mensaje.textContent="Debes iniciar sesión con Google.";return;}
-  if(solicitudEmpresaExistente&&!puedeReenviar){
-    mensaje.textContent="Esta solicitud ya está pendiente, aprobada o suspendida.";
-    return;
-  }
+  if(solicitudEmpresaExistente&&!puedeReenviar){mensaje.textContent="Esta solicitud ya está pendiente, aprobada o suspendida.";return;}
   if(!razonSocial||!nit){mensaje.textContent="Completa la razón social y el NIT.";return;}
-  if(!archivo){mensaje.textContent="Selecciona el documento de soporte de la empresa.";return;}
-  if(archivo.size>10*1024*1024){mensaje.textContent="El documento supera el límite de 10 MB.";return;}
-
-  const tiposPermitidos=["application/pdf","image/jpeg","image/png"];
-  if(!tiposPermitidos.includes(archivo.type)){mensaje.textContent="Solo se permiten archivos PDF, JPG o PNG.";return;}
-
-  boton.disabled=true;
-  boton.textContent=puedeReenviar?"Reenviando solicitud...":"Enviando solicitud...";
-  mensaje.textContent="Cargando el documento privado...";
-  let rutaArchivo=null;
-
+  boton.disabled=true;boton.textContent=puedeReenviar?"Reenviando solicitud...":"Enviando solicitud...";
+  mensaje.textContent="Registrando los datos de tu empresa...";
   try{
-    const nombreSeguro=archivo.name.normalize("NFD").replace(/[\\u0300-\\u036f]/g,"").replace(/[^a-zA-Z0-9._-]/g,"_");
-    rutaArchivo=usuarioActual.id+"/"+Date.now()+"_"+nombreSeguro;
-
-    const {error:errorSubida}=await supabaseClient.storage.from("company-documents")
-      .upload(rutaArchivo,archivo,{contentType:archivo.type,upsert:false});
-
-    if(errorSubida) throw new Error("No se pudo cargar el documento: "+errorSubida.message);
-
-    mensaje.textContent="Documento cargado. Registrando solicitud...";
-
-    const {error:errorRegistro}=await supabaseClient.rpc("submit_company_verification",{
-      p_legal_name:razonSocial,
-      p_nit:nit,
-      p_transport_authorization_reference:referencia||null,
-      p_document_storage_path:rutaArchivo
-    });
-
-    if(errorRegistro){
-      await supabaseClient.storage.from("company-documents").remove([rutaArchivo]);
-      rutaArchivo=null;
-      throw new Error("No se pudo registrar la solicitud: "+errorRegistro.message);
-    }
-
-    mensaje.textContent=puedeReenviar
-      ?"¡Solicitud corregida y reenviada! Tu empresa quedó nuevamente pendiente de revisión."
-      :"¡Solicitud enviada! Tu empresa quedó registrada para revisión. Todavía no está verificada.";
-    solicitudEmpresaExistente={status:"pending"};
-    await cargarEmpresaDesdeSupabase(usuarioActual);
-  }catch(error){
-    mensaje.textContent=error.message||"Ocurrió un error al enviar la solicitud.";
-  }finally{
-    const puedeReenviarAhora=!!solicitudEmpresaExistente
-      && ["rejected","not_submitted"].includes(solicitudEmpresaExistente.status);
-    boton.disabled=!!solicitudEmpresaExistente&&!puedeReenviarAhora;
-    boton.textContent=puedeReenviarAhora?"Reenviar solicitud corregida":
-      solicitudEmpresaExistente?"Solicitud ya registrada":"Enviar solicitud de verificación";
-  }
+    const {error}=await supabaseClient.rpc("submit_company_verification",{p_legal_name:razonSocial,p_nit:nit,p_transport_authorization_reference:referencia||null,p_document_storage_path:null});
+    if(error)throw new Error("No se pudo registrar la solicitud: "+error.message);
+    mensaje.textContent=puedeReenviar?"¡Solicitud corregida y reenviada! Tu empresa quedó nuevamente pendiente de revisión.":"¡Solicitud enviada! Tu empresa quedó registrada para revisión. Todavía no está verificada.";
+    solicitudEmpresaExistente={status:"pending"};await cargarEmpresaDesdeSupabase(usuarioActual);
+  }catch(error){mensaje.textContent=error.message||"Ocurrió un error al enviar la solicitud.";}
+  finally{boton.disabled=false;boton.textContent="Enviar solicitud de verificación";}
 };
 
 function normalizarWhatsApp(valor){
@@ -2037,7 +1904,7 @@ document.addEventListener("click",async(event)=>{
   if(!boton)return;
   const mensaje=boton.closest(".load").querySelector(".interesMensaje");
   if(!usuarioActual){mensaje.textContent="Inicia sesión para manifestar interés.";return;}
-  if(!conductorVerificado){mensaje.textContent="Para manifestar interés debes tener aprobada tu verificación de conductor. Abre la sección Verificación de conductor y envía tus documentos.";return;}
+  if(!conductorVerificado){mensaje.textContent="Para manifestar interés debes tener aprobada tu verificación de conductor. Abre la sección Verificación de conductor y solicita la verificación con tus datos.";return;}
   let vehiculoSeleccionado=null;
   if(vehiculosCuenta.length===1) vehiculoSeleccionado=vehiculosCuenta[0];
   else if(vehiculosCuenta.length>1){
