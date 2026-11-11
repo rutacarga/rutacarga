@@ -844,8 +844,6 @@ function configurarPanelPorRol(){
     tab.classList.toggle("hidden",!tabs[key]);
   });
   $("panelRegistroEmpresa").classList.toggle("hidden",!esEmpresa||empresaVerificada);
-  $("abrirModal").classList.toggle("hidden",esConductor||esEmpresa);
-  if(esConductor)document.querySelector(".notice")?.classList.add("hidden");
   const activa=document.querySelector(".tab.active");
   if(!activa||activa.classList.contains("hidden")){
     const preferida=esAdministrador?"administracion":esEmpresa?"empresa":"buscar";
