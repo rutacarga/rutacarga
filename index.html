@@ -418,7 +418,10 @@ async function cargarEmpresaDesdeSupabase(user){
     .maybeSingle();
 
   if(error){
-    estado.textContent="No se pudo consultar la solicitud: "+error.message;
+    estado.textContent="No se pudo consultar la solicitud: "+error.message+" Recarga la página antes de volver a enviar.";
+    formulario.querySelectorAll("input").forEach(input=>input.disabled=true);
+    boton.disabled=true;
+    boton.textContent="No se pudo verificar la solicitud";
     return;
   }
 
@@ -1251,6 +1254,7 @@ $("enviarEmpresa").onclick=async()=>{
     mensaje.textContent=puedeReenviar
       ?"¡Solicitud corregida y reenviada! Tu empresa quedó nuevamente pendiente de revisión."
       :"¡Solicitud enviada! Tu empresa quedó registrada para revisión. Todavía no está verificada.";
+    solicitudEmpresaExistente={status:"pending"};
     await cargarEmpresaDesdeSupabase(usuarioActual);
   }catch(error){
     mensaje.textContent=error.message||"Ocurrió un error al enviar la solicitud.";
