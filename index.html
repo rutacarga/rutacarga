@@ -57,6 +57,119 @@ footer{text-align:center;padding:25px;color:var(--muted);font-size:12px}
 textarea{min-height:75px;resize:vertical}
 @media(max-width:700px){.grid{grid-template-columns:1fr 1fr}.cards{grid-template-columns:1fr}}
 @media(max-width:430px){.grid,.formgrid{grid-template-columns:1fr}.stats{grid-template-columns:1fr}}
+
+/* RUTA CARGA · identidad visual 2026 */
+:root{
+ --navy:#071b2c;--blue:#087fbd;--bg:#edf4f7;--ink:#102a3a;--muted:#617987;
+ --line:#d8e5eb;--green:#12a878;--red:#c43d4b;--cyan:#27d3d0;--lime:#c7f36b;
+}
+html{scroll-behavior:smooth}
+body{
+ background:radial-gradient(ellipse at 85% 0%,rgba(39,211,208,.10),transparent 34%),linear-gradient(180deg,#f5f9fb 0%,#eaf2f6 100%);
+ font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Arial,sans-serif;
+ color:var(--ink);letter-spacing:-.01em;
+}
+header{
+ position:relative;isolation:isolate;overflow:hidden;padding:30px 20px 34px;
+ background:linear-gradient(115deg,#061827 0%,#0a3049 52%,#087f9b 100%);
+ box-shadow:0 14px 38px rgba(5,32,49,.18);
+}
+header:before{
+ content:"";position:absolute;z-index:-1;width:390px;height:390px;border:1px solid rgba(255,255,255,.13);
+ border-radius:50%;right:-95px;top:-245px;box-shadow:0 0 0 34px rgba(255,255,255,.035),0 0 0 72px rgba(255,255,255,.025);
+}
+header:after{
+ content:"";position:absolute;z-index:-1;width:220px;height:220px;border-radius:50%;right:17%;bottom:-190px;
+ background:rgba(39,211,208,.22);filter:blur(12px);
+}
+.header{max-width:1180px;margin:auto;position:relative}
+.brand{font-size:clamp(27px,4vw,36px);font-weight:950;letter-spacing:-1.3px;display:flex;align-items:center;gap:10px;text-shadow:0 2px 18px rgba(0,0,0,.16)}
+header p{margin:9px 0 0 3px;color:#c6e7ed;font-size:13px;letter-spacing:.055em;font-weight:600}
+main{max-width:1180px;padding:25px 20px 40px}
+.notice{background:#fff9e8;border:1px solid #f3dfaa;border-left:4px solid #f0bd48;border-radius:13px;padding:14px 16px;box-shadow:0 5px 18px rgba(93,73,18,.045)}
+.panel{
+ background:rgba(255,255,255,.94);border:1px solid rgba(211,226,233,.92);border-radius:19px;
+ padding:22px;margin-bottom:18px;box-shadow:0 8px 28px rgba(14,48,66,.055);
+ transition:box-shadow .2s,border-color .2s;
+}
+.panel:hover{box-shadow:0 12px 32px rgba(14,48,66,.075);border-color:#c6dce4}
+h2{font-size:clamp(19px,2.4vw,23px);letter-spacing:-.55px;color:#0b2a3c;margin:0 0 13px;font-weight:850}
+h3{letter-spacing:-.3px}
+.small{color:#647b89;line-height:1.6}
+.tabs{gap:8px;flex-wrap:nowrap;overflow-x:auto;padding:4px 2px 12px;margin:0 0 14px;scrollbar-width:thin}
+.tab{
+ flex:0 0 auto;border:1px solid #d6e4e9;background:rgba(255,255,255,.86);padding:11px 16px;border-radius:12px;
+ font-weight:750;color:#476170;cursor:pointer;transition:all .18s;box-shadow:0 2px 8px rgba(14,48,66,.025)
+}
+.tab:hover{border-color:#8bcfd1;color:#087c91;transform:translateY(-1px)}
+.tab.active{background:linear-gradient(120deg,#08283d,#087e9c);border-color:transparent;color:white;box-shadow:0 7px 18px rgba(7,87,112,.2)}
+.grid{gap:14px}
+label{font-size:11px;letter-spacing:.045em;text-transform:uppercase;color:#58717f;font-weight:800;margin-bottom:7px}
+input,select,textarea{
+ padding:12px 13px;border:1px solid #d5e2e8;border-radius:11px;background:#fbfdfe;color:#173344;
+ font:inherit;font-size:14px;transition:border-color .18s,box-shadow .18s,background .18s
+}
+input:hover,select:hover,textarea:hover{border-color:#a9c7d1}
+input:focus,select:focus,textarea:focus{outline:0;border-color:#13a8b7;box-shadow:0 0 0 4px rgba(19,168,183,.12);background:white}
+.actions{gap:10px}
+.btn{
+ border:1px solid transparent;background:linear-gradient(120deg,#087fae,#08a9b5);color:white;padding:12px 17px;
+ border-radius:11px;font-weight:800;letter-spacing:.005em;cursor:pointer;
+ box-shadow:0 5px 13px rgba(8,127,174,.15);transition:transform .18s,box-shadow .18s,filter .18s
+}
+.btn:hover{transform:translateY(-2px);box-shadow:0 8px 18px rgba(8,127,174,.22);filter:saturate(1.08)}
+.btn:active{transform:translateY(0)}
+.btn.secondary{background:#e8f4f6;color:#126274;border-color:#d4eaed;box-shadow:none}
+.btn.success{background:linear-gradient(120deg,#07966e,#20b982);box-shadow:0 5px 13px rgba(18,168,120,.16)}
+.btn.danger{background:linear-gradient(120deg,#b83245,#d44d5c);box-shadow:0 5px 13px rgba(196,61,75,.14)}
+.btn:disabled{opacity:.55;cursor:not-allowed;transform:none}
+.cards{gap:15px}
+.load,.request{
+ background:linear-gradient(160deg,#fff 0%,#fbfdfe 100%);border:1px solid #dce8ed;border-radius:16px;padding:18px;
+ box-shadow:0 5px 18px rgba(14,48,66,.045);transition:transform .18s,box-shadow .18s,border-color .18s
+}
+.load:hover,.request:hover{transform:translateY(-2px);box-shadow:0 12px 26px rgba(14,48,66,.085);border-color:#b9dce1}
+.route{font-size:19px;letter-spacing:-.45px;color:#102f42}
+.route span{color:#0799a9}
+.meta{gap:7px}
+.chip{background:#eaf5f7;color:#276576;padding:6px 10px;border:1px solid #dceef0;font-weight:700}
+.price{color:#078b68;font-size:24px;letter-spacing:-.6px}
+.stats{gap:12px}
+.stat{background:linear-gradient(145deg,#f2f8fa,#eaf3f6);border:1px solid #deeaee;border-radius:14px;padding:16px;color:#5d7582;font-size:12px;font-weight:700}
+.stat b{font-size:23px;color:#103449;letter-spacing:-.6px}
+.empty{background:#f8fbfc;border-color:#cbdde4;border-radius:14px;padding:28px}
+.status{border-radius:8px;letter-spacing:.02em}
+.status.verified{background:#dff8ec;color:#08764f}
+footer{color:#78909b}
+.modal{backdrop-filter:blur(7px)}
+.modalbox{border:1px solid #dce8ed;border-radius:20px;box-shadow:0 25px 80px rgba(3,24,38,.25)}
+#acceso{position:relative;overflow:hidden;border:1px solid #cfe3e9;background:linear-gradient(115deg,#fff 0%,#f2fbfc 100%)}
+#panelSeleccionRol{border-color:#bce2e5;background:linear-gradient(130deg,#f5ffff,#fff 62%,#f2f9ff)}
+.role-options .btn{min-height:48px}
+@media(min-width:900px){
+ main{padding-top:30px}
+ #buscar>.panel:first-child{padding:25px}
+}
+@media(max-width:700px){
+ header{padding:25px 17px 29px}
+ main{padding:18px 13px 30px}
+ .panel{padding:17px;border-radius:16px}
+ .tabs{margin-right:-13px;padding-right:13px}
+ .tab{padding:10px 13px;font-size:13px}
+ .btn{padding:11px 14px}
+ .stats{grid-template-columns:repeat(3,minmax(0,1fr))}
+ .stat{padding:12px 9px}
+ .stat b{font-size:18px;overflow-wrap:anywhere}
+}
+@media(max-width:430px){
+ .stats{grid-template-columns:1fr}
+ .role-options{display:grid;grid-template-columns:1fr}
+ .role-options .btn{width:100%}
+}
+@media(prefers-reduced-motion:reduce){
+ *,*:before,*:after{scroll-behavior:auto!important;transition:none!important;animation:none!important}
+}
+
 </style>
 </head>
 <body>
