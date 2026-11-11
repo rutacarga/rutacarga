@@ -697,18 +697,32 @@ async function comprobarAdministrador(user){
     .eq("id",user.id)
     .maybeSingle();
 
-  if(error){
+  if(error||!data){
     rolUsuario=null;
     esAdministrador=false;
     empresaVerificada=false;
     $("tabAdmin").classList.add("hidden");
+    $("tabPublicar").classList.add("hidden");
     $("tabVerificacionConductor").classList.add("hidden");
     return;
   }
 
-  rolUsuario=data?.role||null;
-  esAdministrador=!!data&&data.role==="admin"&&data.verification_status==="verified";
-  empresaVerificada=!!data&&data.verification_status==="verified"&&(data.role==="company"||data.role==="admin");
+  rolUsuario=data.role||null;
+  const perfilVerificado=data.verification_status==="verified";
+  esAdministrador=perfilVerificado&&data.role==="admin";
+  empresaVerificada=false;
+
+  if(perfilVerificado&&data.role==="admin"){
+    empresaVerificada=true;
+  }else if(perfilVerificado&&data.role==="company"){
+    const {data:verificacion,error:errorVerificacion}=await supabaseClient
+      .from("company_verifications")
+      .select("status")
+      .eq("user_id",user.id)
+      .maybeSingle();
+    empresaVerificada=!errorVerificacion&&verificacion?.status==="verified";
+  }
+
   const puedeVerificarConductor=["driver","owner","owner_driver"].includes(rolUsuario);
   $("tabAdmin").classList.toggle("hidden",!esAdministrador);
   $("tabPublicar").classList.toggle("hidden",!empresaVerificada);
@@ -718,7 +732,6 @@ async function comprobarAdministrador(user){
     $("mensajeAdmin").textContent="Sesión de administrador reconocida.";
   }
 }
-
 async function mostrarSesion(){
   const {data,error}=await supabaseClient.auth.getUser();
 
