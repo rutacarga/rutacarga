@@ -917,53 +917,18 @@ async function cargarSolicitudesConductoresAdmin(){
 $("recargarConductoresAdmin").addEventListener("click",cargarSolicitudesConductoresAdmin);
 $("filtroConductoresAdmin").addEventListener("change",cargarSolicitudesConductoresAdmin);
 
-
-
+$("enviarVerificacionConductor").addEventListener("click",async()=>{
+  const boton=$("enviarVerificacionConductor"),mensaje=$("mensajeVerificacionConductor");
   if(!usuarioActual){mensaje.textContent="Debes iniciar sesión con Google.";return;}
-  if(!["driver","owner","owner_driver"].includes(rolUsuario)){
-    mensaje.textContent="Esta cuenta no tiene un rol habilitado para verificación de conductor.";
-    return;
-  }
-  if(!archivo){mensaje.textContent="Selecciona el documento que vas a enviar.";return;}
-  if(archivo.size>10*1024*1024){mensaje.textContent="El documento supera el límite de 10 MB.";return;}
-  if(!["application/pdf","image/jpeg","image/png"].includes(archivo.type)){
-    mensaje.textContent="Solo se permiten archivos PDF, JPG o PNG.";
-    return;
-  }
-
-  boton.disabled=true;
-  boton.textContent="Enviando...";
-  mensaje.textContent="Cargando documento privado...";
-  let rutaArchivo=null;
+  if(!["driver","owner","owner_driver"].includes(rolUsuario)){mensaje.textContent="Esta cuenta no tiene un rol habilitado para verificación de conductor.";return;}
+  boton.disabled=true;boton.textContent="Enviando solicitud...";mensaje.textContent="Registrando tu solicitud...";
   try{
-    const nombreSeguro=archivo.name.normalize("NFD")
-      .replace(/[\u0300-\u036f]/g,"")
-      .replace(/[^a-zA-Z0-9._-]/g,"_");
-    rutaArchivo=usuarioActual.id+"/"+Date.now()+"_"+nombreSeguro;
-
-    const {error:errorSubida}=await supabaseClient.storage.from("driver-documents")
-      .upload(rutaArchivo,archivo,{contentType:archivo.type,upsert:false});
-    if(errorSubida) throw new Error("No se pudo cargar el documento: "+errorSubida.message);
-
-    mensaje.textContent="Documento cargado. Registrando solicitud...";
-    const {error:errorRegistro}=await supabaseClient.rpc("submit_driver_verification",{
-      p_document_storage_path:rutaArchivo
-    });
-    if(errorRegistro){
-      await supabaseClient.storage.from("driver-documents").remove([rutaArchivo]);
-      rutaArchivo=null;
-      throw new Error("No se pudo registrar la solicitud: "+errorRegistro.message);
-    }
-
-    $("documentoConductor").value="";
-    mensaje.textContent="¡Solicitud enviada! Tus documentos quedaron pendientes de revisión.";
+    const {error}=await supabaseClient.rpc("submit_driver_verification",{p_document_storage_path:null});
+    if(error)throw new Error("No se pudo registrar la solicitud: "+error.message);
+    mensaje.textContent="¡Solicitud enviada! RUTA CARGA revisará los datos de tu perfil.";
     await cargarSolicitudConductor(usuarioActual);
-  }catch(error){
-    mensaje.textContent=error.message||"Ocurrió un error al enviar la solicitud.";
-  }finally{
-    boton.disabled=false;
-    boton.textContent="Enviar documentos para revisión";
-  }
+  }catch(error){mensaje.textContent=error.message||"Ocurrió un error al enviar la solicitud.";}
+  finally{boton.disabled=false;boton.textContent="Solicitar verificación";}
 });
 
 async function comprobarAdministrador(user){
@@ -1674,61 +1639,23 @@ $("guardarPerfil").onclick=async()=>{
 
 
 
+$("enviarEmpresa").onclick=async()=>{
+  const boton=$("enviarEmpresa"),mensaje=$("mensajeEmpresa");
+  const razonSocial=$("razonSocial").value.trim(),nit=$("nitEmpresa").value.trim();
+  const referencia=$("referenciaAutorizacion").value.trim();
+  const puedeReenviar=!!solicitudEmpresaExistente&&["rejected","not_submitted"].includes(solicitudEmpresaExistente.status);
   if(!usuarioActual){mensaje.textContent="Debes iniciar sesión con Google.";return;}
-  if(solicitudEmpresaExistente&&!puedeReenviar){
-    mensaje.textContent="Esta solicitud ya está pendiente, aprobada o suspendida.";
-    return;
-  }
+  if(solicitudEmpresaExistente&&!puedeReenviar){mensaje.textContent="Esta solicitud ya está pendiente, aprobada o suspendida.";return;}
   if(!razonSocial||!nit){mensaje.textContent="Completa la razón social y el NIT.";return;}
-  if(!archivo){mensaje.textContent="Selecciona el documento de soporte de la empresa.";return;}
-  if(archivo.size>10*1024*1024){mensaje.textContent="El documento supera el límite de 10 MB.";return;}
-
-  const tiposPermitidos=["application/pdf","image/jpeg","image/png"];
-  if(!tiposPermitidos.includes(archivo.type)){mensaje.textContent="Solo se permiten archivos PDF, JPG o PNG.";return;}
-
-  boton.disabled=true;
-  boton.textContent=puedeReenviar?"Reenviando solicitud...":"Enviando solicitud...";
-  mensaje.textContent="Cargando el documento privado...";
-  let rutaArchivo=null;
-
+  boton.disabled=true;boton.textContent=puedeReenviar?"Reenviando solicitud...":"Enviando solicitud...";
+  mensaje.textContent="Registrando los datos de tu empresa...";
   try{
-    const nombreSeguro=archivo.name.normalize("NFD").replace(/[\\u0300-\\u036f]/g,"").replace(/[^a-zA-Z0-9._-]/g,"_");
-    rutaArchivo=usuarioActual.id+"/"+Date.now()+"_"+nombreSeguro;
-
-    const {error:errorSubida}=await supabaseClient.storage.from("company-documents")
-      .upload(rutaArchivo,archivo,{contentType:archivo.type,upsert:false});
-
-    if(errorSubida) throw new Error("No se pudo cargar el documento: "+errorSubida.message);
-
-    mensaje.textContent="Documento cargado. Registrando solicitud...";
-
-    const {error:errorRegistro}=await supabaseClient.rpc("submit_company_verification",{
-      p_legal_name:razonSocial,
-      p_nit:nit,
-      p_transport_authorization_reference:referencia||null,
-      p_document_storage_path:rutaArchivo
-    });
-
-    if(errorRegistro){
-      await supabaseClient.storage.from("company-documents").remove([rutaArchivo]);
-      rutaArchivo=null;
-      throw new Error("No se pudo registrar la solicitud: "+errorRegistro.message);
-    }
-
-    mensaje.textContent=puedeReenviar
-      ?"¡Solicitud corregida y reenviada! Tu empresa quedó nuevamente pendiente de revisión."
-      :"¡Solicitud enviada! Tu empresa quedó registrada para revisión. Todavía no está verificada.";
-    solicitudEmpresaExistente={status:"pending"};
-    await cargarEmpresaDesdeSupabase(usuarioActual);
-  }catch(error){
-    mensaje.textContent=error.message||"Ocurrió un error al enviar la solicitud.";
-  }finally{
-    const puedeReenviarAhora=!!solicitudEmpresaExistente
-      && ["rejected","not_submitted"].includes(solicitudEmpresaExistente.status);
-    boton.disabled=!!solicitudEmpresaExistente&&!puedeReenviarAhora;
-    boton.textContent=puedeReenviarAhora?"Reenviar solicitud corregida":
-      solicitudEmpresaExistente?"Solicitud ya registrada":"Enviar solicitud de verificación";
-  }
+    const {error}=await supabaseClient.rpc("submit_company_verification",{p_legal_name:razonSocial,p_nit:nit,p_transport_authorization_reference:referencia||null,p_document_storage_path:null});
+    if(error)throw new Error("No se pudo registrar la solicitud: "+error.message);
+    mensaje.textContent=puedeReenviar?"¡Solicitud corregida y reenviada! Tu empresa quedó nuevamente pendiente de revisión.":"¡Solicitud enviada! Tu empresa quedó registrada para revisión. Todavía no está verificada.";
+    solicitudEmpresaExistente={status:"pending"};await cargarEmpresaDesdeSupabase(usuarioActual);
+  }catch(error){mensaje.textContent=error.message||"Ocurrió un error al enviar la solicitud.";}
+  finally{boton.disabled=false;boton.textContent="Enviar solicitud de verificación";}
 };
 
 function normalizarWhatsApp(valor){
