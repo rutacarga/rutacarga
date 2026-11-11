@@ -96,6 +96,7 @@ textarea{min-height:75px;resize:vertical}
 <button class="tab hidden" id="tabVerificacionConductor" data-tab="verificacionConductor">Verificar conductor</button>
 <button class="tab" data-tab="empresa">Empresa transportadora</button>
 <button class="tab hidden" id="tabPublicar" data-tab="publicar">Publicar cargas</button>
+<button class="tab hidden" id="tabMisPublicaciones" data-tab="misPublicaciones">Mis publicaciones</button>
 <button class="tab hidden" id="tabAdmin" data-tab="administracion">Administración</button>
 </div>
 
@@ -246,6 +247,41 @@ textarea{min-height:75px;resize:vertical}
 </div>
 <button class="btn success" id="guardarCargaReal" type="button">Publicar carga</button>
 <p class="small" id="mensajeCargaReal" aria-live="polite"></p>
+</div>
+</section>
+
+<section id="misPublicaciones" class="view hidden">
+<div class="panel">
+<h2>Mis publicaciones</h2>
+<p class="small">Administra únicamente las cargas de tu empresa. Las publicaciones cerradas, completadas o canceladas permanecen en el historial; no se borran definitivamente.</p>
+<div class="stats">
+<div class="stat">Publicadas<b id="misActivas">0</b></div>
+<div class="stat">Cerradas<b id="misCerradas">0</b></div>
+<div class="stat">Completadas<b id="misCompletadas">0</b></div>
+</div>
+<div class="actions">
+<select id="filtroMisCargas" aria-label="Filtrar mis publicaciones" style="max-width:220px">
+<option value="all">Todos los estados</option><option value="published">Publicadas</option><option value="closed">Cerradas</option><option value="completed">Completadas</option><option value="cancelled">Canceladas</option>
+</select>
+<button class="btn secondary" id="actualizarMisCargas" type="button">Actualizar</button>
+</div>
+<p class="small" id="mensajeMisCargas" aria-live="polite">Consultando tus publicaciones...</p>
+<div id="listaMisCargas"></div>
+</div>
+<div class="panel hidden" id="editorMiCarga">
+<h2>Editar publicación</h2>
+<input id="editarCargaId" type="hidden">
+<div class="grid">
+<div><label>Origen *</label><input id="editarOrigen" maxlength="100"></div>
+<div><label>Destino *</label><input id="editarDestino" maxlength="100"></div>
+<div><label>Tipo de carga *</label><select id="editarTipo"><option>General</option><option>Contenedor</option><option>Granel</option><option>Refrigerada</option><option>Estibas</option></select></div>
+<div><label>Vehículo requerido</label><select id="editarVehiculo"><option>Tractocamión</option><option>Turbo</option><option>Sencillo</option><option>Patineta</option><option>Camión rígido</option></select></div>
+<div><label>Fecha de cargue *</label><input id="editarFecha" type="date"></div>
+<div><label>Pago ofrecido (COP) *</label><input id="editarPago" type="number" min="1" step="1000"></div>
+<div style="grid-column:1/-1"><label>Detalles adicionales</label><textarea id="editarDescripcion" maxlength="1000"></textarea></div>
+</div>
+<div class="actions"><button class="btn success" id="guardarEdicionCarga" type="button">Guardar cambios</button><button class="btn secondary" id="cancelarEdicionCarga" type="button">Cancelar</button></div>
+<p class="small" id="mensajeEditarCarga" aria-live="polite"></p>
 </div>
 </section>
 
@@ -754,6 +790,7 @@ async function comprobarAdministrador(user){
   const puedeVerificarConductor=["driver","owner","owner_driver"].includes(rolUsuario);
   $("tabAdmin").classList.toggle("hidden",!esAdministrador);
   $("tabPublicar").classList.toggle("hidden",!puedePublicarCargas);
+  $("tabMisPublicaciones").classList.toggle("hidden",!puedePublicarCargas);
   $("tabVerificacionConductor").classList.toggle("hidden",!puedeVerificarConductor);
 
   if(esAdministrador){
@@ -1136,6 +1173,7 @@ document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{
   document.querySelectorAll(".view").forEach(x=>x.classList.toggle("hidden",x.id!==b.dataset.tab));
   if(b.dataset.tab==="administracion"){cargarSolicitudesAdmin();cargarSolicitudesConductoresAdmin();cargarEmpresasAdmin();cargarCargasAdmin();cargarHistorialAdmin();}
   if(b.dataset.tab==="empresa") cargarInteresadosEmpresa();
+  if(b.dataset.tab==="misPublicaciones") cargarMisPublicaciones();
   if(b.dataset.tab==="verificacionConductor"&&usuarioActual) cargarSolicitudConductor(usuarioActual);
 });
 
@@ -1417,6 +1455,87 @@ $("guardarContactoEmpresa").onclick=async()=>{
     boton.disabled=false;
   }
 };
+
+async function cargarMisPublicaciones(){
+  const mensaje=$("mensajeMisCargas"),lista=$("listaMisCargas");
+  if(!usuarioActual||!puedePublicarCargas){mensaje.textContent="Solo la empresa verificada puede consultar sus publicaciones.";lista.innerHTML="";return;}
+  mensaje.textContent="Consultando tus publicaciones...";lista.innerHTML="";
+  const {data,error}=await supabaseClient.from("company_loads")
+    .select("id,company_id,origin_city,destination_city,cargo_type,vehicle_type,loading_date,payment,description,status,created_at,updated_at")
+    .eq("company_id",usuarioActual.id).order("created_at",{ascending:false});
+  if(error){mensaje.textContent="No se pudieron consultar tus publicaciones: "+error.message;return;}
+  const cargas=data||[];
+  $("misActivas").textContent=cargas.filter(x=>x.status==="published").length;
+  $("misCerradas").textContent=cargas.filter(x=>x.status==="closed").length;
+  $("misCompletadas").textContent=cargas.filter(x=>x.status==="completed").length;
+  const filtro=$("filtroMisCargas").value,visibles=filtro==="all"?cargas:cargas.filter(x=>x.status===filtro);
+  if(!visibles.length){mensaje.textContent=cargas.length?"No hay publicaciones en este filtro.":"Todavía no has publicado cargas reales.";return;}
+  mensaje.textContent="Publicaciones encontradas: "+visibles.length;
+  const etiquetas={published:"Publicada",closed:"Cerrada",completed:"Completada",cancelled:"Cancelada"};
+  visibles.forEach(x=>{
+    const card=document.createElement("article");card.className="request";card.style.marginTop="10px";
+    card.innerHTML='<span class="status '+(x.status==="published"?"verified":x.status==="cancelled"?"suspended":"")+'">'+escaparHTML(etiquetas[x.status]||x.status)+'</span>'+
+      '<h3>'+escaparHTML(x.origin_city)+' → '+escaparHTML(x.destination_city)+'</h3>'+
+      '<p class="small"><b>Tipo:</b> '+escaparHTML(x.cargo_type)+' · <b>Vehículo:</b> '+escaparHTML(x.vehicle_type)+'</p>'+
+      '<p class="small"><b>Fecha:</b> '+escaparHTML(x.loading_date||"Sin fecha")+' · <b>Pago:</b> '+dinero(Number(x.payment))+'</p>'+
+      '<p class="small">'+escaparHTML(x.description||"Sin detalles adicionales")+'</p>'+
+      '<div class="actions"></div><p class="small estadoAccionCarga" aria-live="polite"></p>';
+    lista.appendChild(card);
+    const actions=card.querySelector(".actions");
+    const add=(label,cls,fn)=>{const b=document.createElement("button");b.type="button";b.className="btn "+cls;b.textContent=label;b.addEventListener("click",fn);actions.appendChild(b);};
+    if(x.status==="published"){
+      add("Editar","secondary",()=>{
+        $("editarCargaId").value=x.id;$("editarOrigen").value=x.origin_city;$("editarDestino").value=x.destination_city;
+        $("editarTipo").value=x.cargo_type;$("editarVehiculo").value=x.vehicle_type;$("editarFecha").value=x.loading_date||"";
+        $("editarPago").value=x.payment;$("editarDescripcion").value=x.description||"";
+        $("mensajeEditarCarga").textContent="";$("editorMiCarga").classList.remove("hidden");
+        $("editorMiCarga").scrollIntoView({behavior:"smooth",block:"start"});
+      });
+      add("Cerrar carga","secondary",()=>cambiarEstadoMiCarga(x,"close","¿Confirmas que deseas cerrar esta carga?"));
+      add("Marcar completada","success",()=>cambiarEstadoMiCarga(x,"complete","¿Confirmas que el servicio de esta carga terminó?"));
+      add("Cancelar / retirar","danger",()=>cambiarEstadoMiCarga(x,"cancel","¿Confirmas que deseas cancelar y retirar esta carga?"));
+    }else if(x.status==="closed"||x.status==="cancelled"){
+      add("Reabrir publicación","secondary",()=>cambiarEstadoMiCarga(x,"reopen","¿Deseas volver a publicar esta carga?"));
+      if(x.status==="closed")add("Marcar completada","success",()=>cambiarEstadoMiCarga(x,"complete","¿Confirmas que el servicio de esta carga terminó?"));
+    }
+    supabaseClient.from("company_load_status_history").select("old_status,new_status,reason,changed_at")
+      .eq("load_id",x.id).order("changed_at",{ascending:false}).limit(5).then(({data:hist,error})=>{
+        if(error||!hist?.length)return;
+        const h=document.createElement("details");h.style.marginTop="8px";
+        const summary=document.createElement("summary");summary.textContent="Ver historial de cambios";h.appendChild(summary);
+        hist.forEach(item=>{const p=document.createElement("p");p.className="small";p.textContent=(etiquetas[item.old_status]||item.old_status)+" → "+(etiquetas[item.new_status]||item.new_status)+" · "+new Date(item.changed_at).toLocaleString("es-CO")+" · "+item.reason;h.appendChild(p);});
+        card.appendChild(h);
+      });
+  });
+}
+
+async function cambiarEstadoMiCarga(carga,accion,pregunta){
+  if(!confirm(pregunta))return;
+  const motivo=prompt("Indica el motivo (mínimo 3 caracteres):");
+  if(motivo===null)return;
+  if(motivo.trim().length<3){alert("Escribe un motivo de al menos 3 caracteres.");return;}
+  const {error}=await supabaseClient.rpc("company_manage_load_status",{p_load_id:carga.id,p_action:accion,p_reason:motivo.trim()});
+  if(error){alert("No se pudo cambiar el estado: "+error.message);return;}
+  await cargarMisPublicaciones();await cargarCargasReales(usuarioActual);
+}
+
+$("actualizarMisCargas").addEventListener("click",cargarMisPublicaciones);
+$("filtroMisCargas").addEventListener("change",cargarMisPublicaciones);
+$("cancelarEdicionCarga").addEventListener("click",()=>$("editorMiCarga").classList.add("hidden"));
+$("guardarEdicionCarga").addEventListener("click",async()=>{
+  const b=$("guardarEdicionCarga"),m=$("mensajeEditarCarga"),id=$("editarCargaId").value;
+  const o=$("editarOrigen").value.trim(),d=$("editarDestino").value.trim(),f=$("editarFecha").value,p=Number($("editarPago").value);
+  if(!o||!d||!f||!p||p<=0){m.textContent="Completa origen, destino, fecha y pago válido.";return;}
+  b.disabled=true;m.textContent="Guardando cambios...";
+  const {error}=await supabaseClient.from("company_loads").update({
+    origin_city:o,destination_city:d,cargo_type:$("editarTipo").value,vehicle_type:$("editarVehiculo").value,
+    loading_date:f,payment:p,description:$("editarDescripcion").value.trim()||null,updated_at:new Date().toISOString()
+  }).eq("id",id).eq("company_id",usuarioActual.id).eq("status","published");
+  b.disabled=false;
+  if(error){m.textContent="No se pudieron guardar los cambios: "+error.message;return;}
+  m.textContent="Cambios guardados correctamente."; $("editorMiCarga").classList.add("hidden");
+  await cargarMisPublicaciones();await cargarCargasReales(usuarioActual);
+});
 
 async function cargarCargasReales(user){
   const {data,error}=await supabaseClient.from("company_loads")
