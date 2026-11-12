@@ -1,0 +1,1 @@
+create index user_notifications_related_request_idx on public.user_notifications (related_request_id);
