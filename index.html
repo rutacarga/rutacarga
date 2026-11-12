@@ -532,7 +532,19 @@ input:focus,select:focus,textarea:focus{border-color:#075BFF;box-shadow:0 0 0 4p
 <button class="tab hidden" id="tabPublicar" data-tab="publicar">Publicar cargas</button>
 <button class="tab hidden" id="tabMisPublicaciones" data-tab="misPublicaciones">Mis publicaciones</button>
 <button class="tab hidden" id="tabAdmin" data-tab="administracion">Administración</button>
+<button class="tab hidden" id="tabNotificaciones" data-tab="notificaciones">Notificaciones <span id="contadorNotificaciones" aria-label="notificaciones sin leer">0</span></button>
 </div>
+
+<section id="notificaciones" class="view hidden">
+  <div class="panel">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+      <div><h2>Mis notificaciones</h2><p class="small">Avisos sobre tus solicitudes e intereses en cargas.</p></div>
+      <button class="btn secondary" id="actualizarNotificaciones" type="button">Actualizar</button>
+    </div>
+    <p class="small" id="estadoNotificaciones" aria-live="polite">Consulta tus avisos recientes.</p>
+    <div id="listaNotificaciones"></div>
+  </div>
+</section>
 
 <section id="buscar" class="view">
 <div class="panel">
@@ -1264,7 +1276,8 @@ function configurarPanelPorRol(){
     empresa:esAdministrador||esEmpresa,
     publicar:esEmpresa&&puedePublicarCargas,
     misPublicaciones:esEmpresa&&puedePublicarCargas,
-    administracion:esAdministrador
+    administracion:esAdministrador,
+    notificaciones:true
   };
   document.querySelectorAll(".tab").forEach(tab=>{
     const key=tab.dataset.tab;
@@ -1280,6 +1293,89 @@ function configurarPanelPorRol(){
     if(boton&&!boton.classList.contains("hidden"))boton.click();
   }
 }
+
+async function cargarNotificaciones(){
+  const lista=$("listaNotificaciones"),estado=$("estadoNotificaciones"),contador=$("contadorNotificaciones"),pestana=$("tabNotificaciones");
+  if(!usuarioActual||!lista||!estado||!contador||!pestana)return;
+  estado.textContent="Consultando tus notificaciones...";
+  lista.replaceChildren();
+  const {data,error}=await supabaseClient
+    .from("user_notifications")
+    .select("id,event_type,title,body,created_at,read_at,related_request_id")
+    .order("created_at",{ascending:false})
+    .limit(50);
+  if(error){
+    estado.textContent="No se pudieron consultar las notificaciones. "+error.message;
+    contador.textContent="!";
+    contador.setAttribute("aria-label","Error al consultar notificaciones");
+    return;
+  }
+  const notificaciones=data||[];
+  const sinLeer=notificaciones.filter(n=>!n.read_at).length;
+  contador.textContent=String(sinLeer);
+  contador.setAttribute("aria-label",sinLeer+" notificaciones sin leer");
+  estado.textContent=notificaciones.length
+    ? "Tienes "+notificaciones.length+" aviso(s) recientes · "+sinLeer+" sin leer."
+    : "Todavía no tienes notificaciones. Aquí aparecerán los avisos de tus solicitudes.";
+  if(!notificaciones.length){
+    const vacio=document.createElement("div");
+    vacio.className="empty";
+    vacio.textContent="No hay notificaciones por ahora.";
+    lista.appendChild(vacio);
+    return;
+  }
+  notificaciones.forEach(n=>{
+    const tarjeta=document.createElement("article");
+    tarjeta.className="request";
+    tarjeta.style.marginBottom="10px";
+    tarjeta.style.borderLeft=n.read_at?"1px solid #DCE8ED":"4px solid #FF7A00";
+    const encabezado=document.createElement("div");
+    encabezado.style.display="flex";
+    encabezado.style.justifyContent="space-between";
+    encabezado.style.alignItems="center";
+    encabezado.style.gap="10px";
+    encabezado.style.flexWrap="wrap";
+    const titulo=document.createElement("h3");
+    titulo.textContent=n.title||"Notificación";
+    titulo.style.margin="0";
+    const estadoLectura=document.createElement("span");
+    estadoLectura.className="status "+(n.read_at?"verified":"");
+    estadoLectura.textContent=n.read_at?"Leída":"Nueva";
+    encabezado.append(titulo,estadoLectura);
+    const cuerpo=document.createElement("p");
+    cuerpo.className="small";
+    cuerpo.textContent=n.body||"Tienes una actualización en RUTA CARGA.";
+    const fecha=document.createElement("p");
+    fecha.className="small";
+    const instante=new Date(n.created_at);
+    fecha.textContent=Number.isNaN(instante.getTime())?"":instante.toLocaleString("es-CO",{dateStyle:"medium",timeStyle:"short"});
+    tarjeta.append(encabezado,cuerpo,fecha);
+    if(!n.read_at){
+      const boton=document.createElement("button");
+      boton.type="button";
+      boton.className="btn secondary";
+      boton.textContent="Marcar como leída";
+      boton.addEventListener("click",async()=>{
+        if(!usuarioActual)return;
+        boton.disabled=true;
+        const {error:actualizarError}=await supabaseClient
+          .from("user_notifications")
+          .update({read_at:new Date().toISOString()})
+          .eq("id",n.id)
+          .eq("recipient_id",usuarioActual.id);
+        if(actualizarError){
+          estado.textContent="No se pudo marcar como leída: "+actualizarError.message;
+          boton.disabled=false;
+          return;
+        }
+        await cargarNotificaciones();
+      });
+      tarjeta.appendChild(boton);
+    }
+    lista.appendChild(tarjeta);
+  });
+}
+$("actualizarNotificaciones").addEventListener("click",cargarNotificaciones);
 
 async function mostrarSesion(){
   const {data,error}=await supabaseClient.auth.getUser();
@@ -1322,6 +1418,7 @@ async function mostrarSesion(){
     }
 
     configurarPanelPorRol();
+    await cargarNotificaciones();
     if(esAdministrador){
       await cargarResumenAdmin();
       await cargarPropietariosAdmin();
@@ -1887,6 +1984,7 @@ document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{
   if(b.dataset.tab==="misPublicaciones") cargarMisPublicaciones();
   if(b.dataset.tab==="misSolicitudes") cargarMisSolicitudes();
   if(b.dataset.tab==="verificacionConductor"&&usuarioActual) cargarSolicitudConductor(usuarioActual);
+  if(b.dataset.tab==="notificaciones"&&usuarioActual) cargarNotificaciones();
 });
 
 $("filtrar").onclick=()=>{
