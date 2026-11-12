@@ -479,6 +479,22 @@ input:focus,select:focus,textarea:focus{border-color:#075BFF;box-shadow:0 0 0 4p
 #panelRegistroEmpresa{background:linear-gradient(145deg,#fff,#F4F8FF)}
 :focus-visible{outline-color:rgba(7,91,255,.62)}
 
+
+/* Panel de verificación de conductores: contadores y datos por niveles */
+.verification-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:14px 0 12px}
+.verification-count{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:13px 14px;background:#F4F8FF;border:1px solid #DCE6F5;border-radius:13px;color:#10213A;font-size:12px;font-weight:750}
+.verification-count b{font-size:25px;line-height:1;color:#075BFF}
+.verification-count.pending{background:#FFF7EA;border-color:#FFE0B8}.verification-count.pending b{color:#D97706}
+.verification-count.verified{background:#EAF8F1;border-color:#BDE8D0}.verification-count.verified b{color:#13845B}
+.verification-count.rejected,.verification-count.suspended{background:#FFF0F0;border-color:#F4CACA}.verification-count.rejected b,.verification-count.suspended b{color:#B42318}
+.driver-verification-card h3{margin:12px 0 7px;font-size:18px}
+.driver-private-details,.driver-technical-details{margin-top:10px;padding:10px 12px;background:#F8FAFD;border:1px solid #E1E9F4;border-radius:10px}
+.driver-private-details summary,.driver-technical-details summary{font-size:12px;font-weight:800;color:#075BFF}
+.driver-private-details p{margin:8px 0 0;overflow-wrap:anywhere}
+.driver-technical-details{background:#FAFAFA;border-style:dashed}
+.driver-technical-details p{overflow-wrap:anywhere}
+@media(max-width:520px){.verification-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.verification-count{padding:11px}.verification-count b{font-size:22px}}
+
 </style>
 </head>
 <body>
@@ -872,6 +888,7 @@ input:focus,select:focus,textarea:focus{border-color:#075BFF;box-shadow:0 0 0 4p
 <option value="all">Todas las solicitudes</option>
 </select>
 </div>
+<div id="resumenConductoresAdmin" class="verification-summary" aria-live="polite"></div>
 <p class="small" id="mensajeConductoresAdmin" aria-live="polite">Consultando solicitudes...</p>
 <div id="listaConductoresAdmin" class="cards"></div>
 </div>
@@ -1224,103 +1241,135 @@ async function cargarSolicitudesConductoresAdmin(){
   const cargaId=++cargaSolicitudesConductoresAdminId;
   const mensaje=$("mensajeConductoresAdmin");
   const lista=$("listaConductoresAdmin");
+  const resumen=$("resumenConductoresAdmin");
   if(!usuarioActual||!esAdministrador){
     mensaje.textContent="No tienes permisos de administrador verificado.";
     lista.innerHTML="";
+    resumen.innerHTML="";
     return;
   }
 
   mensaje.textContent="Consultando solicitudes de conductores...";
-  lista.innerHTML="";  const filtro=$("filtroConductoresAdmin").value;
-  let consulta=supabaseClient.from("driver_verifications")
+  lista.innerHTML="";
+  resumen.innerHTML="";
+  const filtro=$("filtroConductoresAdmin").value;
+  const {data:solicitudes,error}=await supabaseClient.from("driver_verifications")
     .select("user_id,status,submitted_at,review_notes,reviewed_at,reviewed_by")
     .order("submitted_at",{ascending:false});
-  if(filtro!=="all") consulta=consulta.eq("status",filtro);
-
-  const {data,error}=await consulta;
   if(cargaId!==cargaSolicitudesConductoresAdminId) return;
   if(error){
     mensaje.textContent="No se pudieron consultar las solicitudes: "+error.message;
     return;
   }
-  if(!data||data.length===0){
-    mensaje.textContent="No hay solicitudes en esta categoría.";
-    lista.innerHTML='<div class="empty">No se encontraron solicitudes.</div>';
+
+  const data=solicitudes||[];
+  const conteos={pending:0,verified:0,rejected:0,suspended:0};
+  data.forEach(x=>{if(Object.prototype.hasOwnProperty.call(conteos,x.status))conteos[x.status]++;});
+  const total=data.length;
+  const tarjetasResumen=[
+    ["Pendientes",conteos.pending,"pending"],
+    ["Aprobados",conteos.verified,"verified"],
+    ["Rechazados",conteos.rejected,"rejected"],
+    ["Suspendidos",conteos.suspended,"suspended"]
+  ];
+  tarjetasResumen.forEach(([label,count,status])=>{
+    const item=document.createElement("div");
+    item.className="verification-count "+status;
+    const number=document.createElement("b");
+    number.textContent=String(count);
+    const caption=document.createElement("span");
+    caption.textContent=label;
+    item.append(number,caption);
+    resumen.appendChild(item);
+  });
+  const visibles=filtro==="all"?data:data.filter(x=>x.status===filtro);
+  if(!visibles.length){
+    mensaje.textContent="Solicitudes registradas: "+total+". No hay solicitudes en esta categoría.";
+    lista.innerHTML='<div class="empty">No se encontraron solicitudes en este filtro.</div>';
     return;
   }
 
-  mensaje.textContent="Solicitudes encontradas: "+data.length;
+  mensaje.textContent="Mostrando "+visibles.length+" de "+total+" solicitudes registradas.";
   const estados={pending:"Pendiente de revisión",verified:"Aprobado",rejected:"Rechazado",suspended:"Suspendido",not_submitted:"No enviada"};
-  const ids=data.map(x=>x.user_id);
+  const ids=visibles.map(x=>x.user_id);
   const [{data:perfiles,error:errorPerfiles},{data:datosPrivados,error:errorPrivados}]=await Promise.all([
     supabaseClient.from("profiles").select("id,full_name").in("id",ids),
     supabaseClient.from("driver_verification_private_data").select("user_id,national_id,phone_whatsapp").in("user_id",ids)
   ]);
+  if(cargaId!==cargaSolicitudesConductoresAdminId) return;
   if(errorPerfiles||errorPrivados){
-    mensaje.textContent="Solicitudes consultadas, pero no se pudieron cargar los datos privados de verificación: "+(errorPerfiles?.message||errorPrivados?.message);
+    mensaje.textContent="Solicitudes consultadas, pero no se pudieron cargar los datos del conductor: "+(errorPerfiles?.message||errorPrivados?.message);
     return;
   }
   const nombres=new Map((perfiles||[]).map(x=>[x.id,x.full_name]));
   const privados=new Map((datosPrivados||[]).map(x=>[x.user_id,x]));
 
-  for(const solicitud of data){
+  for(const solicitud of visibles){
     const tarjeta=document.createElement("article");
-    tarjeta.className="request";
+    tarjeta.className="request driver-verification-card";
     const fecha=solicitud.submitted_at?new Date(solicitud.submitted_at).toLocaleString("es-CO"):"No disponible";
     const privado=privados.get(solicitud.user_id);
-    tarjeta.innerHTML=
-      '<span class="status '+escaparHTML(solicitud.status)+'">'+escaparHTML(estados[solicitud.status]||solicitud.status)+'</span>'+
-      '<h3>Solicitud de conductor</h3>'+
-      '<p class="small"><b>Nombre:</b> '+escaparHTML(nombres.get(solicitud.user_id)||"No registrado")+'</p>'+
-      '<p class="small"><b>Cédula:</b> '+escaparHTML(privado?.national_id||"No registrada")+'</p>'+
-      '<p class="small"><b>Celular / WhatsApp:</b> '+escaparHTML(privado?.phone_whatsapp||"No registrado")+'</p>'+
-      '<p class="small"><b>Usuario:</b> '+escaparHTML(solicitud.user_id)+'</p>'+
-      '<p class="small"><b>Fecha de envío:</b> '+escaparHTML(fecha)+'</p>'+
-      (solicitud.review_notes?'<p class="small"><b>Observaciones:</b> '+escaparHTML(solicitud.review_notes)+'</p>':"")+
-      (solicitud.status==="pending"?
-        '<div class="actions"><button class="btn success aprobarConductorBtn" type="button">Aprobar conductor</button><button class="btn danger rechazarConductorBtn" type="button">Rechazar solicitud</button></div>':"")+
-      '<p class="small resultadoConductorAdmin" aria-live="polite"></p>';
-    lista.appendChild(tarjeta);
+    const nombre=nombres.get(solicitud.user_id)||"Usuario sin nombre";
+    const estado=document.createElement("span");
+    estado.className="status "+solicitud.status;
+    estado.textContent=estados[solicitud.status]||solicitud.status;
+    const titulo=document.createElement("h3");
+    titulo.textContent=nombre;
+    const idCorto=document.createElement("p");
+    idCorto.className="small";
+    idCorto.textContent="ID interno: "+solicitud.user_id.slice(0,8)+"…";
+    const fechaEl=document.createElement("p");
+    fechaEl.className="small";
+    fechaEl.textContent="Fecha de envío: "+fecha;
+    tarjeta.append(estado,titulo,idCorto,fechaEl);
 
-
-
-    const aprobar=tarjeta.querySelector(".aprobarConductorBtn");
-    if(aprobar) aprobar.addEventListener("click",async()=>{
-      if(!confirm("¿Confirmas que deseas APROBAR este conductor?")) return;
-      const resultado=tarjeta.querySelector(".resultadoConductorAdmin");
-      aprobar.disabled=true;
-      resultado.textContent="Procesando aprobación...";
-      const {error:rpcError}=await supabaseClient.rpc("approve_driver",{p_user_id:solicitud.user_id});
-      if(rpcError){
-        resultado.textContent="No se pudo aprobar: "+rpcError.message;
-        aprobar.disabled=false;
-        return;
-      }
-      resultado.textContent="Conductor aprobado correctamente.";
-      await cargarSolicitudesConductoresAdmin();
+    const datos=document.createElement("details");
+    datos.className="driver-private-details";
+    const resumenDatos=document.createElement("summary");
+    resumenDatos.textContent="Ver identificación y contacto";
+    datos.appendChild(resumenDatos);
+    [["Cédula",privado?.national_id||"No registrada"],["Celular / WhatsApp",privado?.phone_whatsapp||"No registrado"]].forEach(([label,value])=>{
+      const p=document.createElement("p");p.className="small";
+      const b=document.createElement("b");b.textContent=label+": ";
+      p.append(b,document.createTextNode(value));datos.appendChild(p);
     });
+    const tecnico=document.createElement("details");
+    tecnico.className="driver-technical-details";
+    const tecnicoSummary=document.createElement("summary");tecnicoSummary.textContent="Detalles técnicos";
+    const tecnicoId=document.createElement("p");tecnicoId.className="small";tecnicoId.textContent="Identificador completo: "+solicitud.user_id;
+    tecnico.append(tecnicoSummary,tecnicoId);
+    tarjeta.append(datos,tecnico);
+    if(solicitud.review_notes){
+      const obs=document.createElement("p");obs.className="small";obs.textContent="Observaciones: "+solicitud.review_notes;tarjeta.appendChild(obs);
+    }
+    if(solicitud.status==="pending"){
+      const actions=document.createElement("div");actions.className="actions";
+      const aprobar=document.createElement("button");aprobar.className="btn success";aprobar.type="button";aprobar.textContent="Aprobar conductor";
+      const rechazar=document.createElement("button");rechazar.className="btn danger";rechazar.type="button";rechazar.textContent="Rechazar solicitud";
+      actions.append(aprobar,rechazar);tarjeta.appendChild(actions);
+      const resultado=document.createElement("p");resultado.className="small resultadoConductorAdmin";resultado.setAttribute("aria-live","polite");tarjeta.appendChild(resultado);
 
-    const rechazar=tarjeta.querySelector(".rechazarConductorBtn");
-    if(rechazar) rechazar.addEventListener("click",async()=>{
-      const motivo=prompt("Escribe el motivo del rechazo (mínimo 5 caracteres):");
-      if(motivo===null) return;
-      if(motivo.trim().length<5){alert("El motivo debe tener al menos 5 caracteres.");return;}
-      if(!confirm("¿Confirmas que deseas RECHAZAR esta solicitud?")) return;
-      const resultado=tarjeta.querySelector(".resultadoConductorAdmin");
-      rechazar.disabled=true;
-      resultado.textContent="Procesando rechazo...";
-      const {error:rpcError}=await supabaseClient.rpc("reject_driver",{
-        p_user_id:solicitud.user_id,
-        p_reason:motivo.trim()
+      aprobar.addEventListener("click",async()=>{
+        if(!confirm("¿Confirmas que deseas APROBAR este conductor?")) return;
+        aprobar.disabled=true;rechazar.disabled=true;resultado.textContent="Procesando aprobación...";
+        const {error:rpcError}=await supabaseClient.rpc("approve_driver",{p_user_id:solicitud.user_id});
+        if(rpcError){resultado.textContent="No se pudo aprobar: "+rpcError.message;aprobar.disabled=false;rechazar.disabled=false;return;}
+        resultado.textContent="Conductor aprobado correctamente.";
+        await cargarSolicitudesConductoresAdmin();
       });
-      if(rpcError){
-        resultado.textContent="No se pudo rechazar: "+rpcError.message;
-        rechazar.disabled=false;
-        return;
-      }
-      resultado.textContent="Solicitud rechazada correctamente.";
-      await cargarSolicitudesConductoresAdmin();
-    });
+      rechazar.addEventListener("click",async()=>{
+        const motivo=prompt("Escribe el motivo del rechazo (mínimo 5 caracteres):");
+        if(motivo===null)return;
+        if(motivo.trim().length<5){alert("El motivo debe tener al menos 5 caracteres.");return;}
+        if(!confirm("¿Confirmas que deseas RECHAZAR esta solicitud?"))return;
+        aprobar.disabled=true;rechazar.disabled=true;resultado.textContent="Procesando rechazo...";
+        const {error:rpcError}=await supabaseClient.rpc("reject_driver",{p_user_id:solicitud.user_id,p_reason:motivo.trim()});
+        if(rpcError){resultado.textContent="No se pudo rechazar: "+rpcError.message;aprobar.disabled=false;rechazar.disabled=false;return;}
+        resultado.textContent="Solicitud rechazada correctamente.";
+        await cargarSolicitudesConductoresAdmin();
+      });
+    }
+    lista.appendChild(tarjeta);
   }
 }
 
