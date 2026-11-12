@@ -1969,8 +1969,9 @@ async function cargarResumenAdmin(){
   if(!usuarioActual||!esAdministrador){estado.textContent="Acceso restringido a administración.";acciones.textContent="";return;}
   estado.textContent="Actualizando indicadores operativos...";
   acciones.textContent="";
-  const contar=async(tabla,columna,valor)=>{
-    let consulta=supabaseClient.from(tabla).select("id",{count:"exact",head:true});
+  // Las tablas de verificación usan user_id como clave primaria; las demás usan id.
+  const contar=async(tabla,columna,valor,columnaClave="id")=>{
+    let consulta=supabaseClient.from(tabla).select(columnaClave,{count:"exact",head:true});
     if(columna)consulta=consulta.eq(columna,valor);
     const {count,error}=await consulta;
     if(error)throw error;
@@ -1978,8 +1979,8 @@ async function cargarResumenAdmin(){
   };
   try{
     const [empresas,conductores,cargas,intereses,usuarios,empresasVerificadas,conductoresVerificados,vehiculos,interesesTotales,interesesContactados]=await Promise.all([
-      contar("company_verifications","status","pending"),
-      contar("driver_verifications","status","pending"),
+      contar("company_verifications","status","pending","user_id"),
+      contar("driver_verifications","status","pending","user_id"),
       contar("company_loads","status","published"),
       contar("load_interest_requests","status","pending"),
       contar("profiles",null,null),
