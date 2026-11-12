@@ -1908,7 +1908,7 @@ async function cargarResumenAdmin(){
     $("adminInteresesTotales").textContent=interesesTotales;
     $("adminTasaContacto").textContent=(interesesTotales?Math.round(interesesContactados/interesesTotales*100):0)+"%";
     const {data:solicitudesMetricas,error:errorSolicitudesMetricas}=await supabaseClient.from("load_interest_requests")
-      .select("id,created_at").order("created_at",{ascending:false}).limit(1000);
+      .select("id,created_at").order("created_at",{ascending:false}).limit(100);
     if(errorSolicitudesMetricas)throw errorSolicitudesMetricas;
     const idsMetricas=(solicitudesMetricas||[]).map(x=>x.id);
     let historialMetricas=[];
@@ -1921,7 +1921,7 @@ async function cargarResumenAdmin(){
     }
     const metricasRespuesta=calcularMetricasPrimerContacto(solicitudesMetricas||[],historialMetricas);
     $("adminTiempoRespuesta").textContent=textoTiempoRespuesta(metricasRespuesta);
-    $("adminMuestraTiempo").textContent="Casos medidos: "+metricasRespuesta.muestra+" de hasta 1.000 solicitudes recientes consultadas. Mediana recepción → primer Contactado; no es un SLA.";
+    $("adminMuestraTiempo").textContent="Casos medidos: "+metricasRespuesta.muestra+" de hasta 100 solicitudes recientes consultadas. Mediana recepción → primer Contactado; no es un SLA.";
     const recomendaciones=[];
     if(empresas)recomendaciones.push("Revisar "+empresas+" solicitud(es) pendiente(s) de empresa.");
     if(conductores)recomendaciones.push("Revisar "+conductores+" solicitud(es) pendiente(s) de conductor.");
@@ -2365,16 +2365,16 @@ async function cargarInteresadosEmpresa(){
   const {data:historialData,error:errorHistorial}=await supabaseClient
     .from("load_interest_status_history")
     .select("request_id,old_status,new_status,changed_at")
-    .in("request_id",solicitudes.map(s=>s.id))
+    .in("request_id",solicitudes.slice(0,100).map(s=>s.id))
     .order("changed_at",{ascending:true});
   if(errorHistorial){console.error("No se pudo consultar el historial:",errorHistorial.message);}
   (historialData||[]).forEach(h=>{
     if(!historialPorSolicitud[h.request_id])historialPorSolicitud[h.request_id]=[];
     historialPorSolicitud[h.request_id].push(h);
   });
-  const metricasRespuesta=calcularMetricasPrimerContacto(solicitudes,historialData||[]);
+  const metricasRespuesta=calcularMetricasPrimerContacto(solicitudes.slice(0,100),historialData||[]);
   $("tiempoRespuestaEmpresa").textContent=textoTiempoRespuesta(metricasRespuesta);
-  $("muestraTiempoEmpresa").textContent="Casos medidos: "+metricasRespuesta.muestra+". Mediana desde la recepción hasta el primer estado Contactado; no representa un SLA.";
+  $("muestraTiempoEmpresa").textContent="Casos medidos: "+metricasRespuesta.muestra+" de hasta 100 solicitudes recientes. Mediana desde la recepción hasta el primer estado Contactado; no representa un SLA.";
   const grupos=new Map();
   for(const solicitud of visibles){
     const carga=cargasReales.find(x=>x.id===solicitud.load_id);
