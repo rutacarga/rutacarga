@@ -726,7 +726,9 @@ input:focus,select:focus,textarea:focus{border-color:#075BFF;box-shadow:0 0 0 4p
 <div class="stat">Cerrados<b id="totalCerrados">0</b></div>
 <div class="stat">Solicitudes totales<b id="totalSolicitudes">0</b></div>
 <div class="stat">Tasa de contacto<b id="tasaContacto">0%</b></div>
+<div class="stat">Tiempo mediano al primer contacto<b id="tiempoRespuestaEmpresa">—</b></div>
 </div>
+<p class="small" id="muestraTiempoEmpresa">Se calcula con solicitudes que tienen evento de primer contacto; se muestra desde 5 casos.</p>
 <div class="actions">
 <button class="btn secondary" id="actualizarInteresados" type="button">Actualizar interesados</button>
 <select id="filtroInteresados" aria-label="Filtrar solicitudes" style="max-width:220px">
@@ -822,7 +824,9 @@ input:focus,select:focus,textarea:focus{border-color:#075BFF;box-shadow:0 0 0 4p
 <div class="stat">Vehículos registrados<b id="adminVehiculosRegistrados">—</b></div>
 <div class="stat">Intereses totales<b id="adminInteresesTotales">—</b></div>
 <div class="stat">Tasa de contacto<b id="adminTasaContacto">—</b></div>
+<div class="stat">Tiempo mediano al primer contacto<b id="adminTiempoRespuesta">—</b></div>
 </div>
+<p class="small" id="adminMuestraTiempo">Métrica basada en historial disponible; se muestra desde 5 casos.</p>
 <div class="panel" style="margin-top:12px;background:var(--soft)">
 <b>Administrador IA · recomendaciones de solo lectura</b>
 <p class="small">Análisis basado en reglas y cifras consultadas. No es IA generativa y no aprueba, rechaza ni modifica registros.</p>
@@ -1903,6 +1907,21 @@ async function cargarResumenAdmin(){
     $("adminVehiculosRegistrados").textContent=vehiculos;
     $("adminInteresesTotales").textContent=interesesTotales;
     $("adminTasaContacto").textContent=(interesesTotales?Math.round(interesesContactados/interesesTotales*100):0)+"%";
+    const {data:solicitudesMetricas,error:errorSolicitudesMetricas}=await supabaseClient.from("load_interest_requests")
+      .select("id,created_at").order("created_at",{ascending:false}).limit(1000);
+    if(errorSolicitudesMetricas)throw errorSolicitudesMetricas;
+    const idsMetricas=(solicitudesMetricas||[]).map(x=>x.id);
+    let historialMetricas=[];
+    if(idsMetricas.length){
+      const {data,error}=await supabaseClient.from("load_interest_status_history")
+        .select("request_id,new_status,changed_at").in("request_id",idsMetricas).eq("new_status","contacted")
+        .order("changed_at",{ascending:true}).limit(5000);
+      if(error)throw error;
+      historialMetricas=data||[];
+    }
+    const metricasRespuesta=calcularMetricasPrimerContacto(solicitudesMetricas||[],historialMetricas);
+    $("adminTiempoRespuesta").textContent=textoTiempoRespuesta(metricasRespuesta);
+    $("adminMuestraTiempo").textContent="Casos medidos: "+metricasRespuesta.muestra+" de hasta 1.000 solicitudes recientes consultadas. Mediana recepción → primer Contactado; no es un SLA.";
     const recomendaciones=[];
     if(empresas)recomendaciones.push("Revisar "+empresas+" solicitud(es) pendiente(s) de empresa.");
     if(conductores)recomendaciones.push("Revisar "+conductores+" solicitud(es) pendiente(s) de conductor.");
@@ -2287,6 +2306,29 @@ function normalizarWhatsApp(valor){
   return numero;
 }
 
+function calcularMetricasPrimerContacto(solicitudes,historial){
+  const creacion=new Map((solicitudes||[]).map(s=>[s.id,Date.parse(s.created_at)]));
+  const primerContacto=new Map();
+  (historial||[]).forEach(evento=>{
+    if(evento.new_status!=="contacted")return;
+    const momento=Date.parse(evento.changed_at),inicio=creacion.get(evento.request_id);
+    if(!Number.isFinite(momento)||!Number.isFinite(inicio)||momento<inicio)return;
+    const anterior=primerContacto.get(evento.request_id);
+    if(anterior===undefined||momento<anterior)primerContacto.set(evento.request_id,momento);
+  });
+  const minutos=[...primerContacto.entries()].map(([id,momento])=>(momento-creacion.get(id))/60000).sort((a,b)=>a-b);
+  const n=minutos.length;
+  const mediana=n?(n%2?minutos[(n-1)/2]:(minutos[n/2-1]+minutos[n/2])/2):null;
+  return {muestra:n,medianaMinutos:mediana};
+}
+function textoTiempoRespuesta(metricas){
+  if(metricas.muestra<5)return "Muestra insuficiente ("+metricas.muestra+"/5)";
+  const minutos=Math.round(metricas.medianaMinutos);
+  if(minutos<60)return minutos+" min";
+  const horas=Math.floor(minutos/60),resto=minutos%60;
+  return horas+" h"+(resto?" "+resto+" min":"");
+}
+
 async function cargarInteresadosEmpresa(){
   const mensaje=$("mensajeInteresados"),lista=$("listaInteresados");
   if(!usuarioActual){mensaje.textContent="Inicia sesión para consultar los interesados.";lista.innerHTML="";return;}
@@ -2330,6 +2372,9 @@ async function cargarInteresadosEmpresa(){
     if(!historialPorSolicitud[h.request_id])historialPorSolicitud[h.request_id]=[];
     historialPorSolicitud[h.request_id].push(h);
   });
+  const metricasRespuesta=calcularMetricasPrimerContacto(solicitudes,historialData||[]);
+  $("tiempoRespuestaEmpresa").textContent=textoTiempoRespuesta(metricasRespuesta);
+  $("muestraTiempoEmpresa").textContent="Casos medidos: "+metricasRespuesta.muestra+". Mediana desde la recepción hasta el primer estado Contactado; no representa un SLA.";
   const grupos=new Map();
   for(const solicitud of visibles){
     const carga=cargasReales.find(x=>x.id===solicitud.load_id);
