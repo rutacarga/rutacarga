@@ -1116,11 +1116,13 @@ async function cargarSolicitudConductor(user){
   if(!data){
     conductorVerificado=false;
     estado.innerHTML='<span class="status">Sin solicitud</span><p class="small">Todavía no has solicitado la verificación.</p>';
+    actualizarResumenConfianza();
     pintar();
     return;
   }
 
   conductorVerificado=data.status==="verified";
+  actualizarResumenConfianza();
   const estados={
     not_submitted:"No enviada",
     pending:"Pendiente de revisión",
