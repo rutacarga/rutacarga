@@ -11,6 +11,14 @@ Rama de trabajo: `feature/roadmap-inteligencia-etapas`
 - Toda escritura nueva debe ser autenticada, autorizada por RLS y registrada; nunca exponer claves secretas en el navegador.
 - Hacer pruebas con datos de prueba y usuarios de prueba; no simular aprobaciones ni alterar registros reales.
 
+## Endurecimiento de seguridad ya aplicado en Supabase
+- Se movieron las implementaciones privilegiadas de `is_ruta_carga_admin`, `is_ruta_carga_verified_admin` y `empresa_ruta_carga_verificada` al esquema `private`, fuera del esquema público expuesto por PostgREST.
+- Se conservaron funciones wrapper en `public` como `SECURITY INVOKER` para no romper las políticas RLS ni las comprobaciones del frontend.
+- Se mantuvieron los permisos mínimos de ejecución necesarios para las políticas RLS; el helper de administrador devuelve false para un usuario anónimo/no administrador.
+- La advertencia genérica de SECURITY DEFINER bajó de 15 a 12 funciones expuestas. Las 12 restantes son endpoints de operación que deben seguir siendo ejecutables por usuarios autenticados, pero validan rol/propiedad/estado dentro de la función. No se revocaron permisos necesarios.
+- Se probaron con JWT sintético no administrador 11 RPC mutadoras (aprobación/rechazo, administración de cargas/empresas, cambios de estado y envío de verificaciones); todas rechazaron el intento. Las pruebas se ejecutaron en transacción y se revirtió.
+- La protección contra contraseñas filtradas no se pudo activar en el plan Free: Supabase documenta que requiere Pro o superior. No se cambió el plan ni se generó un costo. Referencia: https://supabase.com/docs/guides/auth/password-security
+
 ## Estado técnico de partida
 - Frontend actual: aplicación HTML/JavaScript en `index.html`, Supabase JS desde el navegador y despliegue Vercel.
 - Tablas existentes relevantes: `profiles`, `vehicles`, `company_loads`, `load_interest_requests`, `company_public_contacts`, verificaciones e historiales.
