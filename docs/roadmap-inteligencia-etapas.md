@@ -164,3 +164,11 @@ Preparar la arquitectura y la primera versión determinista de emparejamiento en
 - No se modificó el esquema de Supabase ni se cargaron datos comerciales. La UI se basa en información existente y muestra claramente que el directorio está en preparación.
 - JavaScript inline validado sintácticamente tras los cambios. El detector de IDs solo señaló una plantilla dinámica preexistente; no se identificaron duplicados estáticos nuevos.
 - La rama continúa aislada de producción. Falta prueba visual/interactiva con sesiones reales y revisión de contenido/privacidad antes de publicar.
+
+
+## Avance — asistente de orientación 24/7 (2026-11-12 UTC)
+- Se añadió en la rama de preview una pestaña **Asistente 24/7** con preguntas frecuentes sobre registro/roles, verificación, publicación, interés en cargas, carga de regreso, notificaciones, confianza y servicios complementarios.
+- La primera versión es un orientador determinista con respuestas redactadas y coincidencia de palabras clave; **no es IA generativa ni un agente humano**. Se identifica de forma explícita para no crear expectativas falsas.
+- Las respuestas se muestran con textContent; no se envían preguntas a proveedores externos ni se transmiten datos personales. No se conecta a LLM, WhatsApp, correo ni APIs de pago.
+- No puede consultar estados privados, aprobar usuarios, modificar cargas, negociar tarifas ni efectuar pagos. Las consultas no reconocidas se derivan a las secciones correspondientes o al equipo de RUTA CARGA.
+- JavaScript inline y unicidad de IDs estáticos comprobados después del cambio. Falta prueba interactiva con navegador y sesiones reales; sigue siendo preview aislado.
