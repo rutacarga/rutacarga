@@ -733,6 +733,18 @@ input:focus,select:focus,textarea:focus{border-color:#075BFF;box-shadow:0 0 0 4p
 
 <!-- PANEL DE ADMINISTRACIÓN -->
 <section id="administracion" class="view hidden">
+<div class="panel" id="panelResumenAdmin">
+<h2>Resumen operativo inteligente · Beta</h2>
+<p class="small">Resumen automático basado en los estados actuales de la plataforma. Solo visible para administración; no ejecuta acciones.</p>
+<div class="stats">
+<div class="stat">Empresas pendientes<b id="adminEmpresasPendientes">—</b></div>
+<div class="stat">Conductores pendientes<b id="adminConductoresPendientes">—</b></div>
+<div class="stat">Cargas publicadas<b id="adminCargasPublicadas">—</b></div>
+<div class="stat">Intereses pendientes<b id="adminInteresesPendientes">—</b></div>
+</div>
+<p class="small" id="adminResumenEstado" aria-live="polite">Consultando indicadores...</p>
+<div id="adminResumenAcciones" class="small"></div>
+</div>
 <div class="panel">
 <h2>Directorio general de usuarios</h2>
 <p class="small">Vista global de perfiles, roles, estados de verificación y vehículos registrados.</p>
@@ -1310,6 +1322,7 @@ async function mostrarSesion(){
 
     configurarPanelPorRol();
     if(esAdministrador){
+      await cargarResumenAdmin();
       await cargarPropietariosAdmin();
       await cargarSolicitudesAdmin();
       await cargarSolicitudesConductoresAdmin();
@@ -1650,6 +1663,44 @@ async function cargarUsuariosAdmin(){
       '<p class="small">Registro: '+escaparHTML(new Date(p.created_at).toLocaleString("es-CO"))+'</p>';
     lista.appendChild(card);
   });
+}
+
+async function cargarResumenAdmin(){
+  const estado=$("adminResumenEstado"),acciones=$("adminResumenAcciones");
+  if(!usuarioActual||!esAdministrador){estado.textContent="Acceso restringido a administración.";acciones.textContent="";return;}
+  estado.textContent="Actualizando indicadores operativos...";
+  acciones.textContent="";
+  const contar=async(tabla,columna,valor)=>{
+    let consulta=supabaseClient.from(tabla).select("id",{count:"exact",head:true});
+    if(columna)consulta=consulta.eq(columna,valor);
+    const {count,error}=await consulta;
+    if(error)throw error;
+    return count||0;
+  };
+  try{
+    const [empresas,conductores,cargas,intereses]=await Promise.all([
+      contar("company_verifications","status","pending"),
+      contar("driver_verifications","status","pending"),
+      contar("company_loads","status","published"),
+      contar("load_interest_requests","status","pending")
+    ]);
+    $("adminEmpresasPendientes").textContent=empresas;
+    $("adminConductoresPendientes").textContent=conductores;
+    $("adminCargasPublicadas").textContent=cargas;
+    $("adminInteresesPendientes").textContent=intereses;
+    const recomendaciones=[];
+    if(empresas)recomendaciones.push("Revisar "+empresas+" solicitud(es) pendiente(s) de empresa.");
+    if(conductores)recomendaciones.push("Revisar "+conductores+" solicitud(es) pendiente(s) de conductor.");
+    if(intereses)recomendaciones.push("Hay "+intereses+" interés(es) pendiente(s) de respuesta empresarial.");
+    if(!cargas)recomendaciones.push("No hay cargas publicadas en este momento; conviene revisar la activación de empresas verificadas.");
+    if(!recomendaciones.length)recomendaciones.push("No se detectan pendientes prioritarios en estos indicadores.");
+    const lista=document.createElement("ul");lista.style.paddingLeft="20px";
+    recomendaciones.forEach(t=>{const item=document.createElement("li");item.textContent=t;lista.appendChild(item);});
+    acciones.replaceChildren(lista);
+    estado.textContent="Indicadores actualizados. Resumen basado en reglas; no es una decisión automatizada.";
+  }catch(e){
+    estado.textContent="No se pudieron actualizar los indicadores: "+(e.message||"Error de consulta.");
+  }
 }
 
 async function cargarSolicitudesInteresAdmin(){
