@@ -534,6 +534,7 @@ input:focus,select:focus,textarea:focus{border-color:#075BFF;box-shadow:0 0 0 4p
 <button class="tab hidden" id="tabAdmin" data-tab="administracion">Administración</button>
 <button class="tab hidden" id="tabNotificaciones" data-tab="notificaciones">Notificaciones <span id="contadorNotificaciones" aria-label="notificaciones sin leer">0</span></button>
 <button class="tab" id="tabServicios" data-tab="servicios">Servicios complementarios</button>
+<button class="tab" id="tabAsistente" data-tab="asistente">Asistente 24/7</button>
 </div>
 
 <section id="notificaciones" class="view hidden">
@@ -560,6 +561,27 @@ input:focus,select:focus,textarea:focus{border-color:#075BFF;box-shadow:0 0 0 4p
 <div class="load"><h3>Seguros y servicios financieros</h3><p class="small">Información de proveedores sujetos a revisión y habilitación.</p></div>
 </div>
 <div class="notice" style="margin-top:14px"><b>Directorio en preparación.</b> Todavía no hay proveedores publicados ni recomendaciones comerciales activas. RUTA CARGA verificará los aliados antes de mostrarlos. No compartas datos ni realices pagos a terceros por medio de este módulo.</div>
+</div>
+</section>
+
+<section id="asistente" class="view hidden">
+<div class="panel">
+<h2>Asistente RUTA CARGA · 24/7</h2>
+<p class="small">Guía automática para resolver dudas frecuentes sobre el uso de la plataforma. Esta versión usa respuestas preparadas; no es un asesor humano ni una IA generativa.</p>
+<div class="actions" style="flex-wrap:wrap">
+<button class="btn secondary preguntaAsistente" type="button" data-question="¿Cómo me registro y elijo mi tipo de cuenta?">Registro y tipo de cuenta</button>
+<button class="btn secondary preguntaAsistente" type="button" data-question="¿Cómo verifico mi cuenta de conductor?">Verificación</button>
+<button class="btn secondary preguntaAsistente" type="button" data-question="¿Quién puede publicar cargas?">Publicar cargas</button>
+<button class="btn secondary preguntaAsistente" type="button" data-question="¿Cómo manifiesto interés en una carga?">Interés en cargas</button>
+<button class="btn secondary preguntaAsistente" type="button" data-question="¿Cómo busco carga de regreso?">Carga de regreso</button>
+</div>
+<label for="preguntaAsistente">¿En qué podemos orientarte?</label>
+<div class="actions">
+<input id="preguntaAsistente" maxlength="240" placeholder="Escribe tu pregunta..." style="flex:1;min-width:220px">
+<button class="btn" id="consultarAsistente" type="button">Consultar</button>
+</div>
+<div class="notice" id="respuestaAsistente" aria-live="polite">Hola. Selecciona una pregunta frecuente o escribe tu consulta. Si el tema requiere revisión de tu cuenta, utiliza la sección correspondiente o contacta al equipo de RUTA CARGA.</div>
+<p class="small">No escribas contraseñas, documentos, números de identificación ni datos bancarios. El asistente no modifica cuentas, verifica usuarios ni aprueba cargas.</p>
 </div>
 </section>
 
@@ -1335,7 +1357,8 @@ function configurarPanelPorRol(){
     misPublicaciones:esEmpresa&&puedePublicarCargas,
     administracion:esAdministrador,
     notificaciones:true,
-    servicios:true
+    servicios:true,
+    asistente:true
   };
   document.querySelectorAll(".tab").forEach(tab=>{
     const key=tab.dataset.tab;
@@ -2033,6 +2056,32 @@ function pintar(lista=todas()){
 
 $("abrirRegistroEmpresa").onclick=()=>document.querySelector('.tab[data-tab="empresa"]').click();
 
+
+const respuestasAsistente=[
+  {keys:["registro","registrarme","crear cuenta","tipo de cuenta","rol"],answer:"Inicia sesión con Google. Si tu cuenta aún no tiene un rol, la plataforma te permitirá elegir el tipo de cuenta que corresponda a tu actividad. Selecciona el rol correcto; no elijas Empresa si eres conductor o propietario."},
+  {keys:["verificacion","verificar","conductor verificado","aprobar conductor"],answer:"Abre la pestaña Verificar conductor y consulta tu estado. Si todavía puedes enviar la solicitud, utiliza el botón Solicitar verificación. Enviar la solicitud no significa que ya esté aprobada; espera la revisión en la plataforma."},
+  {keys:["publicar","publicacion","empresa transportadora","crear carga","subir carga"],answer:"La publicación de cargas está reservada a empresas transportadoras verificadas. Completa el registro de empresa y espera la aprobación. Si ya estás verificada, entra en Publicar cargas."},
+  {keys:["interes","manifestar","solicitud","contactar empresa"],answer:"Para manifestar interés debes iniciar sesión y tener aprobada la verificación de conductor. Desde una carga disponible, usa la opción para manifestar interés y sigue las indicaciones. La empresa propietaria de esa carga recibirá el aviso."},
+  {keys:["regreso","retorno","carga de vuelta","carga de regreso"],answer:"Entra en Carga de regreso y busca por ciudad de origen o destino según tu recorrido. La búsqueda actual es manual y utiliza cargas publicadas; no requiere compartir tu ubicación GPS."},
+  {keys:["notificacion","aviso","alerta"],answer:"Abre Notificaciones para consultar tus avisos recientes. Puedes actualizar la bandeja y marcar cada aviso como leído. Los avisos dependen de eventos registrados en la plataforma."},
+  {keys:["servicio","taller","llanta","grua","parqueadero","seguro"],answer:"El módulo Servicios complementarios está en preparación. Aún no publica proveedores verificados ni gestiona pagos, reservas o contratación. No envíes dinero a terceros por este módulo."},
+  {keys:["confianza","puntaje","calificacion","reputacion"],answer:"Mi perfil de confianza muestra un resumen privado de señales disponibles, como estado de verificación y vehículos registrados. Actualmente no asigna estrellas, puntajes ni reputación pública."},
+  {keys:["contraseña","contrasena","clave","datos personales","documento"],answer:"Por seguridad, nunca compartas contraseñas, códigos de acceso, documentos, datos bancarios ni información sensible en este chat. RUTA CARGA no te pedirá tu contraseña por este medio."}
+];
+function responderAsistente(){
+  const input=$("preguntaAsistente"),salida=$("respuestaAsistente");
+  const pregunta=(input?.value||"").trim().toLocaleLowerCase("es-CO").normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+  if(!pregunta){salida.textContent="Escribe una pregunta o elige uno de los temas frecuentes.";return;}
+  const match=respuestasAsistente.find(item=>item.keys.some(key=>pregunta.includes(key.normalize("NFD").replace(/[\u0300-\u036f]/g,""))));
+  salida.textContent=match?match.answer:"No tengo una respuesta confirmada para esa consulta todavía. Revisa las secciones de la plataforma relacionadas con tu trámite o contacta al equipo de RUTA CARGA. Esta guía no puede revisar estados particulares de tu cuenta.";
+}
+$("consultarAsistente").addEventListener("click",responderAsistente);
+$("preguntaAsistente").addEventListener("keydown",event=>{if(event.key==="Enter")responderAsistente();});
+document.querySelectorAll(".preguntaAsistente").forEach(button=>button.addEventListener("click",()=>{
+  $("preguntaAsistente").value=button.dataset.question||"";
+  responderAsistente();
+}));
+
 document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{
   if(b.dataset.tab==="administracion"&&!esAdministrador) return;
   document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active",x===b));
@@ -2043,6 +2092,7 @@ document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{
   if(b.dataset.tab==="misSolicitudes") cargarMisSolicitudes();
   if(b.dataset.tab==="verificacionConductor"&&usuarioActual) cargarSolicitudConductor(usuarioActual);
   if(b.dataset.tab==="notificaciones"&&usuarioActual) cargarNotificaciones();
+  if(b.dataset.tab==="asistente") $("preguntaAsistente").focus();
 });
 
 $("filtrar").onclick=()=>{
