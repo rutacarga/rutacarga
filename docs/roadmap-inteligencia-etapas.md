@@ -201,3 +201,9 @@ Preparar la arquitectura y la primera versión determinista de emparejamiento en
 - Validación: script JavaScript inline pasó análisis sintáctico después del cambio. Falta probar la métrica visualmente con sesiones reales de empresa y administrador y verificar el preview recién construido.
 - Producción sigue sin cambios.
 
+
+
+## QA manual por perfiles (2026-11-12)
+- Se creó docs/qa-manual-real-accounts.md con cobertura de visitante, conductor verificado/no verificado, empresa verificada/no verificada y administrador, además de pruebas transversales y criterios de aprobación.
+- Advertencia de entorno: un preview Vercel no implica una base Supabase aislada. Antes de cualquier acción de escritura hay que confirmar staging independiente; no se deben crear cargas, solicitudes ni verificaciones de prueba en la base operativa.
+- La matriz está preparada, pero no se afirma ejecución E2E: no se dispone de sesiones autenticadas de los tres perfiles ni de staging confirmado.
