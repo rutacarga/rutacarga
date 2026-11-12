@@ -533,6 +533,7 @@ input:focus,select:focus,textarea:focus{border-color:#075BFF;box-shadow:0 0 0 4p
 <button class="tab hidden" id="tabMisPublicaciones" data-tab="misPublicaciones">Mis publicaciones</button>
 <button class="tab hidden" id="tabAdmin" data-tab="administracion">Administración</button>
 <button class="tab hidden" id="tabNotificaciones" data-tab="notificaciones">Notificaciones <span id="contadorNotificaciones" aria-label="notificaciones sin leer">0</span></button>
+<button class="tab" id="tabServicios" data-tab="servicios">Servicios complementarios</button>
 </div>
 
 <section id="notificaciones" class="view hidden">
@@ -544,6 +545,22 @@ input:focus,select:focus,textarea:focus{border-color:#075BFF;box-shadow:0 0 0 4p
     <p class="small" id="estadoNotificaciones" aria-live="polite">Consulta tus avisos recientes.</p>
     <div id="listaNotificaciones"></div>
   </div>
+</section>
+
+<section id="servicios" class="view hidden">
+<div class="panel">
+<h2>Servicios complementarios</h2>
+<p class="small">Estamos preparando un directorio de aliados para apoyar la operación de conductores, propietarios y empresas transportadoras.</p>
+<div class="cards">
+<div class="card"><h3>Talleres y mantenimiento</h3><p class="small">Mecánica preventiva y correctiva para vehículos de carga.</p></div>
+<div class="card"><h3>Llantas y repuestos</h3><p class="small">Proveedores de llantas, repuestos y asistencia técnica.</p></div>
+<div class="card"><h3>Grúas y asistencia vial</h3><p class="small">Apoyo en carretera y atención de contingencias.</p></div>
+<div class="card"><h3>Parqueaderos y patios</h3><p class="small">Espacios para estacionamiento y custodia de vehículos.</p></div>
+<div class="card"><h3>Combustible y lubricantes</h3><p class="small">Puntos de abastecimiento y productos para operación.</p></div>
+<div class="card"><h3>Seguros y servicios financieros</h3><p class="small">Información de proveedores sujetos a revisión y habilitación.</p></div>
+</div>
+<div class="notice" style="margin-top:14px"><b>Directorio en preparación.</b> Todavía no hay proveedores publicados ni recomendaciones comerciales activas. RUTA CARGA verificará los aliados antes de mostrarlos. No compartas datos ni realices pagos a terceros por medio de este módulo.</div>
+</div>
 </section>
 
 <section id="buscar" class="view">
@@ -616,6 +633,15 @@ input:focus,select:focus,textarea:focus{border-color:#075BFF;box-shadow:0 0 0 4p
 </div>
 <button class="btn" id="guardarPerfil">Guardar perfil</button>
 <p class="small" id="mensajePerfil" aria-live="polite"></p>
+</div>
+<div class="panel" id="panelConfianzaCuenta">
+<h2>Mi perfil de confianza</h2>
+<p class="small">Resumen privado de señales verificables de tu cuenta. No es una calificación pública ni un puntaje comercial.</p>
+<div class="stats">
+<div class="stat">Estado en RUTA CARGA<b id="estadoConfianzaCuenta">Consultando…</b></div>
+<div class="stat">Vehículos registrados<b id="totalVehiculosConfianza">0</b></div>
+</div>
+<p class="small" id="detalleConfianzaCuenta" aria-live="polite">Este resumen solo lo puedes consultar desde tu cuenta.</p>
 </div>
 </section>
 
@@ -952,6 +978,34 @@ async function cargarPerfilDesdeSupabase(user){
     if(!mostrar){modoCoincidencias=false;botonCoincidencias.setAttribute("aria-pressed","false");}
   }
   if(vehiculosCuenta.length){$("vehiculoSeleccionado").value=vehiculosCuenta[0].id;cargarVehiculoEnFormulario(vehiculosCuenta[0].id);mensaje.textContent="Se recuperaron "+vehiculosCuenta.length+" vehículo(s) de tu cuenta.";}else{$("vehiculoSeleccionado").value="";limpiarFormularioVehiculo();mensaje.textContent="Tu cuenta está lista. Registra tu primer vehículo.";}
+  actualizarResumenConfianza();
+}
+
+
+function actualizarResumenConfianza(){
+  const estado=$("estadoConfianzaCuenta"),vehiculos=$("totalVehiculosConfianza"),detalle=$("detalleConfianzaCuenta");
+  if(!estado||!vehiculos||!detalle)return;
+  vehiculos.textContent=String(Array.isArray(vehiculosCuenta)?vehiculosCuenta.length:0);
+  if(rolUsuario==="company"){
+    estado.textContent=empresaVerificada?"Empresa verificada":"Verificación pendiente o no confirmada";
+    detalle.textContent=empresaVerificada
+      ?"La cuenta empresarial figura verificada en los registros de RUTA CARGA."
+      :"Completa o consulta el proceso de verificación empresarial desde la pestaña Empresa transportadora.";
+  }else if(["driver","owner_driver"].includes(rolUsuario)){
+    estado.textContent=conductorVerificado?"Conductor verificado":"Conductor no verificado";
+    detalle.textContent=conductorVerificado
+      ?"La solicitud de conductor figura verificada. Mantén actualizados los datos de tu vehículo."
+      :"La verificación del conductor aún no aparece como aprobada. Consulta la pestaña Verificar conductor.";
+  }else if(rolUsuario==="owner"){
+    estado.textContent="Propietario registrado";
+    detalle.textContent="La plataforma muestra tu rol de propietario y los vehículos registrados. No se asigna una puntuación pública.";
+  }else if(rolUsuario==="admin"){
+    estado.textContent="Cuenta administradora";
+    detalle.textContent="Acceso administrativo reconocido. Este resumen no representa una calificación comercial.";
+  }else{
+    estado.textContent="Estado no disponible";
+    detalle.textContent="No fue posible determinar un estado verificable para esta cuenta.";
+  }
 }
 
 async function cargarEmpresaDesdeSupabase(user){
@@ -1257,6 +1311,7 @@ async function comprobarAdministrador(user){
   $("tabVerificacionConductor").classList.toggle("hidden",!puedeVerificarConductor);
 
   configurarPanelPorRol();
+  actualizarResumenConfianza();
   if(esAdministrador){
     $("mensajeAdmin").textContent="Sesión de administrador reconocida. Tienes acceso global de lectura y administración.";
   }
@@ -1277,7 +1332,8 @@ function configurarPanelPorRol(){
     publicar:esEmpresa&&puedePublicarCargas,
     misPublicaciones:esEmpresa&&puedePublicarCargas,
     administracion:esAdministrador,
-    notificaciones:true
+    notificaciones:true,
+    servicios:true
   };
   document.querySelectorAll(".tab").forEach(tab=>{
     const key=tab.dataset.tab;
