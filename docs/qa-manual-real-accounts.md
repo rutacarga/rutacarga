@@ -91,3 +91,36 @@ Hasta disponer de un proyecto Supabase de staging independiente:
 5. No solicitar contraseñas al usuario. Las sesiones de QA deben prepararse mediante el flujo de acceso normal y con cuentas de prueba autorizadas.
 
 Este hallazgo bloquea pruebas E2E con escrituras; no bloquea el trabajo de revisión estática ni modifica producción.
+
+
+## Staging aislado habilitado — 2026-11-12
+
+Se creó un proyecto Supabase independiente para QA, con cotización de USD 0/mes:
+
+- Proyecto: `RUTA CARGA STAGING`
+- Project ref: `euyrjjaiaskwoplvlbun`
+- Región: `us-east-1`
+- Estado observado: `ACTIVE_HEALTHY`
+- No se copiaron perfiles, cargas, solicitudes, documentos ni usuarios de producción.
+- Se reconstruyó el esquema de aplicación desde el catálogo PostgreSQL de producción: tablas públicas, enums, funciones de autorización/RPC, triggers, políticas RLS, grants mínimos y buckets privados vacíos.
+- Las 13 tablas de aplicación tienen RLS activo y están vacías.
+- Los buckets `company-documents` y `driver-documents` son privados, límite 10 MB, PDF/JPEG/PNG.
+- Pruebas SQL de privilegios: anon no puede leer perfiles; authenticated no puede borrar perfiles ni cambiar directamente rol, verificación o estado de publicación; las RPC administrativas rechazaron llamadas con JWT sintético no-admin.
+- Los 12 avisos SECURITY DEFINER de Supabase Advisor corresponden a RPC autenticadas que tienen validación interna de rol; no se habilitó ejecución anónima. Deben revisarse de nuevo antes de producción.
+
+### Preview conectado a staging
+
+- `index.html` obtiene la URL y la publishable key desde `/config.js`.
+- `config.js` de esta rama apunta únicamente a staging y se niega a ejecutarse fuera de un host `.vercel.app`.
+- Commits de configuración: `46219028e1abc5184ab98179070c0580b8fad332` y `91c28effd13bf3c7ccccd341d1bbad8c6c06d2f0`.
+- Deployment preview: `https://rutacarga-git-feature-roadmap-inteligencia-etapas-ruta-carga.vercel.app`, estado Vercel `READY`.
+- La rama `main` y el dominio de producción no fueron modificados.
+
+### Pendientes antes de E2E autenticado
+
+1. Configurar en el proyecto staging los proveedores de autenticación (Google/OAuth y/o correo) y sus redirect URLs de preview; no se copiaron secretos OAuth de producción.
+2. Crear cuentas sintéticas para conductor, propietario, empresa y administrador usando el flujo normal, y preparar estados verificados solo en staging.
+3. Verificar visualmente el preview en navegador y ejecutar la matriz E2E con datos sintéticos.
+4. Revalidar políticas, grants y Advisor después de completar la configuración de Auth.
+
+La reconstrucción del esquema no equivale a un dump binario completo del proyecto administrado por Supabase: la configuración de Auth, secretos, usuarios, documentos y parámetros del proveedor deben configurarse de forma independiente.
