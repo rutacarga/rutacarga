@@ -394,6 +394,47 @@ details summary{color:var(--navy);font-weight:750;cursor:pointer}
 @media(prefers-reduced-motion:reduce){
   *,*:before,*:after{scroll-behavior:auto!important;transition:none!important;animation:none!important}
 }
+
+/* Identidad visual aprobada: rojo y negro */
+:root{
+  --navy:#101010;
+  --blue:#242424;
+  --orange:#D71920;
+  --orange-dark:#A30F17;
+  --bg:#F5F5F5;
+  --surface:#FFFFFF;
+  --ink:#171717;
+  --muted:#666666;
+  --line:#E3E3E3;
+}
+header{
+  background:linear-gradient(112deg,#050505 0%,#171717 68%,#292929 100%);
+  border-bottom-color:#D71920;
+}
+header:after{background:rgba(215,25,32,.24)}
+.brand-hero-inner{border-color:#3B1517}
+.brand-hero-inner:before{
+  background:linear-gradient(90deg,rgba(0,0,0,.96) 0%,rgba(18,18,18,.88) 43%,rgba(30,10,11,.32) 100%);
+}
+.brand-hero h1 em{color:#FF424A}
+.tab:hover{color:#B5121B;border-color:#E6A0A3}
+.tab.active{background:linear-gradient(120deg,#080808,#292929);border-color:#D71920}
+.btn{
+  background:linear-gradient(120deg,#A90F17,#E21B25);
+  box-shadow:0 5px 13px rgba(180,15,25,.2);
+}
+.btn:hover{box-shadow:0 8px 18px rgba(180,15,25,.27)}
+.btn.secondary{color:#171717;background:#F1F1F1;border-color:#D8D8D8}
+.btn.secondary:hover{background:#E8E8E8}
+input:focus,select:focus,textarea:focus{border-color:#D71920;box-shadow:0 0 0 4px rgba(215,25,32,.13)}
+.panel:hover,.load:hover,.request:hover{border-color:#E3A3A6}
+#panelSeleccionRol{background:linear-gradient(130deg,#FFF2F2,#fff 62%,#F5F5F5);border-color:#E8B8BA}
+#panelRegistroEmpresa{background:linear-gradient(145deg,#fff,#FCFCFC)}
+:focus-visible{outline-color:rgba(215,25,32,.58)}
+@media(max-width:700px){
+  .brand-hero-inner:before{background:linear-gradient(90deg,rgba(0,0,0,.95),rgba(22,22,22,.76) 62%,rgba(30,10,11,.3))}
+}
+
 </style>
 </head>
 <body>
