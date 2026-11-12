@@ -1498,19 +1498,16 @@ async function cargarCargasAdmin(){
     const retirada=c.status==="cancelled";
     const gestionable=["published","cancelled"].includes(c.status);
     const etiquetaEstado={published:"Publicada",closed:"Cerrada",completed:"Completada",cancelled:"Retirada"}[c.status]||c.status;
-    const protegida=c.id==="3001d24d-f0e0-4862-b256-a02c2a128111";
     card.innerHTML='<span class="status '+(retirada?'suspended':c.status==="published"?'verified':'')+'">'+escaparHTML(etiquetaEstado)+'</span>'+
-      (protegida?'<span class="status verified">Publicación protegida</span>':'')+
       '<h3>'+escaparHTML(c.origin_city)+' → '+escaparHTML(c.destination_city)+'</h3>'+
       '<p class="small"><b>Tipo:</b> '+escaparHTML(c.cargo_type)+' · <b>Vehículo:</b> '+escaparHTML(c.vehicle_type)+'</p>'+
       '<p class="small"><b>Fecha de cargue:</b> '+escaparHTML(c.loading_date||'Sin fecha')+' · <b>Pago:</b> '+dinero(Number(c.payment))+'</p>'+
       '<p class="small"><b>ID publicación:</b> '+escaparHTML(c.id)+'</p>'+
       '<p class="small"><b>Empresa:</b> '+escaparHTML(c.company_id)+'</p>'+
-      (protegida?'<p class="small">Esta publicación real está protegida y no puede retirarse desde el panel administrativo.</p>':
-      (gestionable?'<div class="actions"><button class="btn '+(retirada?'success':'danger')+' estadoCargaBtn" type="button">'+(retirada?'Restaurar publicación':'Retirar publicación')+'</button></div>':'<p class="small">Estado histórico. Se conserva para trazabilidad y no admite retiro/restauración desde esta vista.</p>'))+
+      (gestionable?'<div class="actions"><button class="btn '+(retirada?'success':'danger')+' estadoCargaBtn" type="button">'+(retirada?'Restaurar publicación':'Retirar publicación')+'</button></div>':'<p class="small">Estado histórico. Se conserva para trazabilidad y no admite retiro/restauración desde esta vista.</p>')+
       '<p class="small resultadoCargaAdmin" aria-live="polite"></p>';
     lista.appendChild(card);
-    if(!protegida&&gestionable) card.querySelector("button").addEventListener("click",async()=>{
+    if(gestionable) card.querySelector("button").addEventListener("click",async()=>{
       const accion=retirada?"republish":"withdraw";
       const motivo=prompt("Motivo para "+(retirada?"restaurar":"retirar")+" la publicación (mínimo 5 caracteres):");
       if(motivo===null)return;
