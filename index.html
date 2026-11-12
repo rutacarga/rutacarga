@@ -916,10 +916,10 @@ input:focus,select:focus,textarea:focus{border-color:#075BFF;box-shadow:0 0 0 4p
 
 <footer>RUTA CARGA · La red nacional del hombre camión · Colombia</footer>
 
+<script src="/config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const SUPABASE_URL="https://hnnjdtisekgacydcsvzd.supabase.co";
-const SUPABASE_ANON_KEY="sb_publishable_bVkpz6cXQ3d9BxyMCnwHEA_pYOHjiyu";
+const {url:SUPABASE_URL,key:SUPABASE_ANON_KEY}=window.RUTA_CARGA_SUPABASE_CONFIG;
 const supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
 
 const $=id=>document.getElementById(id);
