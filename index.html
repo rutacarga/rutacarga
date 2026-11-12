@@ -720,9 +720,9 @@ input:focus,select:focus,textarea:focus{border-color:#075BFF;box-shadow:0 0 0 4p
 <div><label for="razonSocial">Razón social *</label><input id="razonSocial" maxlength="180" placeholder="Nombre legal de la empresa"></div>
 <div><label for="nitEmpresa">NIT *</label><input id="nitEmpresa" maxlength="30" placeholder="NIT de la empresa"></div>
 <div style="grid-column:1/-1"><label for="referenciaAutorizacion">Referencia de autorización o habilitación</label><input id="referenciaAutorizacion" maxlength="180" placeholder="Número o referencia, si aplica"></div>
-
+<div style="grid-column:1/-1"><label for="documentoEmpresa">Documento de soporte (PDF, JPG o PNG · máximo 10 MB)</label><input id="documentoEmpresa" type="file" accept="application/pdf,image/jpeg,image/png"><p class="small">El archivo se guarda en un espacio privado. Solo tú y el equipo administrador autorizado podrán consultarlo.</p></div>
 </div>
-<div class="notice" style="margin-top:14px">Enviar la solicitud no significa que la empresa esté aprobada. RUTA CARGA revisará los datos registrados.</div>
+<div class="notice" style="margin-top:14px">Enviar la solicitud no significa que la empresa esté aprobada. RUTA CARGA revisará los datos registrados. El documento de soporte es opcional.</div>
 <button class="btn" id="enviarEmpresa" type="button">Enviar solicitud de verificación</button>
 <p class="small" id="mensajeEmpresa" aria-live="polite"></p>
 </div>
@@ -2377,19 +2377,38 @@ $("enviarEmpresa").onclick=async()=>{
   const boton=$("enviarEmpresa"),mensaje=$("mensajeEmpresa");
   const razonSocial=$("razonSocial").value.trim(),nit=$("nitEmpresa").value.trim();
   const referencia=$("referenciaAutorizacion").value.trim();
+  const archivo=$("documentoEmpresa").files?.[0]||null;
   const puedeReenviar=!!solicitudEmpresaExistente&&["rejected","not_submitted"].includes(solicitudEmpresaExistente.status);
   if(!usuarioActual){mensaje.textContent="Debes iniciar sesión con Google.";return;}
   if(solicitudEmpresaExistente&&!puedeReenviar){mensaje.textContent="Esta solicitud ya está pendiente, aprobada o suspendida.";return;}
   if(!razonSocial||!nit){mensaje.textContent="Completa la razón social y el NIT.";return;}
+  const tiposPermitidos=["application/pdf","image/jpeg","image/png"];
+  if(archivo&&(!tiposPermitidos.includes(archivo.type)||archivo.size>10*1024*1024)){
+    mensaje.textContent="El documento debe ser PDF, JPG o PNG y no superar 10 MB.";return;
+  }
   boton.disabled=true;boton.textContent=puedeReenviar?"Reenviando solicitud...":"Enviando solicitud...";
   mensaje.textContent="Registrando los datos de tu empresa...";
+  let rutaDocumento=null;
   try{
-    const {error}=await supabaseClient.rpc("submit_company_verification",{p_legal_name:razonSocial,p_nit:nit,p_transport_authorization_reference:referencia||null,p_document_storage_path:null});
+    if(archivo){
+      const extension=archivo.type==="application/pdf"?"pdf":archivo.type==="image/jpeg"?"jpg":"png";
+      const nombreArchivo=(crypto.randomUUID?crypto.randomUUID():Date.now()+"-"+Math.random().toString(16).slice(2))+"."+extension;
+      rutaDocumento=usuarioActual.id+"/"+nombreArchivo;
+      mensaje.textContent="Cargando documento de forma privada...";
+      const {error:errorCarga}=await supabaseClient.storage.from("company-documents").upload(rutaDocumento,archivo,{contentType:archivo.type,upsert:false});
+      if(errorCarga)throw new Error("No se pudo cargar el documento: "+errorCarga.message);
+    }
+    const {error}=await supabaseClient.rpc("submit_company_verification",{
+      p_legal_name:razonSocial,p_nit:nit,p_transport_authorization_reference:referencia||null,p_document_storage_path:rutaDocumento
+    });
     if(error)throw new Error("No se pudo registrar la solicitud: "+error.message);
+    $("documentoEmpresa").value="";
     mensaje.textContent=puedeReenviar?"¡Solicitud corregida y reenviada! Tu empresa quedó nuevamente pendiente de revisión.":"¡Solicitud enviada! Tu empresa quedó registrada para revisión. Todavía no está verificada.";
     solicitudEmpresaExistente={status:"pending"};await cargarEmpresaDesdeSupabase(usuarioActual);
-  }catch(error){mensaje.textContent=error.message||"Ocurrió un error al enviar la solicitud.";}
-  finally{boton.disabled=false;boton.textContent="Enviar solicitud de verificación";}
+  }catch(error){
+    if(rutaDocumento)await supabaseClient.storage.from("company-documents").remove([rutaDocumento]);
+    mensaje.textContent=error.message||"Ocurrió un error al enviar la solicitud.";
+  }finally{boton.disabled=false;boton.textContent="Enviar solicitud de verificación";}
 };
 
 function normalizarWhatsApp(valor){
