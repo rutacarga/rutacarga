@@ -654,6 +654,8 @@ input:focus,select:focus,textarea:focus{border-color:#075BFF;box-shadow:0 0 0 4p
 <div class="stat">Pendientes<b id="totalPendientes">0</b></div>
 <div class="stat">Contactados<b id="totalContactados">0</b></div>
 <div class="stat">Cerrados<b id="totalCerrados">0</b></div>
+<div class="stat">Solicitudes totales<b id="totalSolicitudes">0</b></div>
+<div class="stat">Tasa de contacto<b id="tasaContacto">0%</b></div>
 </div>
 <div class="actions">
 <button class="btn secondary" id="actualizarInteresados" type="button">Actualizar interesados</button>
@@ -1758,31 +1760,27 @@ function calcularAfinidadCarga(carga){
     tanque:["granel"],
     refrigerada:["refrigerada"]
   };
-  const vehiculos=vehiculosCuenta.filter(v=>v.availability!=="unavailable"&&v.availability!=="busy");
+  const vehiculos=vehiculosCuenta.filter(v=>!["unavailable","busy"].includes(normalizar(v.availability)));
   if(!vehiculos.length)return {score:0,razones:[],placa:""};
   const opciones=vehiculos.map(v=>{
-    let puntos=0,peso=0;
+    let puntos=0;
     const razones=[];
     const configuracion=normalizar(v.configuration);
     const tipoVehiculo=normalizar(carga.v);
-    if(tipoVehiculo==="tractocamion"&&configuracion&&configuracion!=="otra"){
-      peso+=35;
-      if(["2s1","2s2","3s2","3s3"].includes(configuracion)){puntos+=35;razones.push("Configuración de tractocamión");}
+    if(tipoVehiculo==="tractocamion"&&configuracion&&configuracion!=="otra"&&["2s1","2s2","3s2","3s3"].includes(configuracion)){
+      puntos+=35;razones.push("Configuración registrada compatible");
     }
     const carroceria=normalizar(v.body_type),tipoCarga=normalizar(carga.t);
-    if(carroceria&&tipoCarga&&compatiblesCarroceria[carroceria]){
-      peso+=25;
-      if(compatiblesCarroceria[carroceria].includes(tipoCarga)){puntos+=25;razones.push("Carrocería compatible");}
+    if(carroceria&&tipoCarga&&compatiblesCarroceria[carroceria]&&compatiblesCarroceria[carroceria].includes(tipoCarga)){
+      puntos+=25;razones.push("Carrocería compatible");
     }
-    if(v.city&&carga.o){
-      peso+=30;
-      if(normalizar(v.city)===normalizar(carga.o)){puntos+=30;razones.push("Origen en tu ciudad");}
+    if(v.city&&carga.o&&normalizar(v.city)===normalizar(carga.o)){
+      puntos+=30;razones.push("Ciudad habitual coincide con el origen");
     }
-    if(v.availability){
-      peso+=10;
-      if(normalizar(v.availability)==="available"){puntos+=10;razones.push("Vehículo disponible");}
+    if(normalizar(v.availability)==="available"){
+      puntos+=10;razones.push("Vehículo marcado como disponible");
     }
-    return {score:peso?Math.round(puntos/peso*100):0,razones,placa:v.plate||""};
+    return {score:puntos,razones,placa:v.plate||""};
   });
   return opciones.sort((a,b)=>b.score-a.score)[0];
 }
@@ -1798,8 +1796,8 @@ function tarjeta(x){
   let afinidadHtml="";
   if(modoCoincidencias&&usuarioActual&&["driver","owner","owner_driver"].includes(rolUsuario)){
     const afinidad=calcularAfinidadCarga(x);
-    const razones=afinidad.razones.length?afinidad.razones.join(" · "):"No hay criterios suficientes para confirmar compatibilidad.";
-    afinidadHtml='<p class="small"><b>Afinidad orientativa: '+afinidad.score+'/100</b> · '+escaparHTML(razones)+'</p>';
+    const razones=afinidad.razones.length?afinidad.razones.join(" · "):"Sin coincidencias confirmadas con los datos registrados.";
+    afinidadHtml='<p class="small"><b>Coincidencias confirmadas: '+afinidad.score+'/100</b> · '+escaparHTML(razones)+' · No valida ubicación GPS ni el tipo exacto del vehículo.</p>';
   }
   let interes="";
   if(x.real&&usuarioActual&&x.company_id!==usuarioActual.id&&["driver","owner","owner_driver"].includes(rolUsuario)){
@@ -1981,6 +1979,8 @@ async function cargarInteresadosEmpresa(){
   $("totalPendientes").textContent=totales.pending;
   $("totalContactados").textContent=totales.contacted;
   $("totalCerrados").textContent=totales.closed;
+  $("totalSolicitudes").textContent=solicitudes.length;
+  $("tasaContacto").textContent=(solicitudes.length?Math.round(totales.contacted/solicitudes.length*100):0)+"%";
   const filtro=$("filtroInteresados").value;
   const visibles=filtro==="all"?solicitudes:solicitudes.filter(s=>s.status===filtro);
   mensaje.textContent=solicitudes.length?"Solicitudes recibidas: "+solicitudes.length+" · Mostrando: "+visibles.length:"Todavía no hay transportadores interesados en tus cargas.";
