@@ -144,3 +144,13 @@ Preparar la arquitectura y la primera versión determinista de emparejamiento en
 - Verificación posterior: RLS habilitado; permisos comprobados (sin INSERT para authenticated, sin acceso anon, UPDATE limitado a `read_at`); dos triggers presentes; función privada sin EXECUTE público; asesor de rendimiento ya no reporta FK sin índice.
 - **Todavía no hay bandeja visible en el frontend.** La tabla no se ha añadido a los esquemas expuestos del Data API ni se ha conectado al cliente; falta revisar la configuración de exposición, implementar UI y probar con cuentas de prueba. Por tanto, las alertas están preparadas a nivel de base de datos, pero no se presentan todavía a los usuarios.
 - No se enviaron correos, WhatsApp ni mensajes externos, no se modificaron solicitudes reales y no se tocó producción del frontend.
+
+
+## Avance — bandeja de alertas y búsqueda manual de regreso (2026-11-12 UTC)
+- Se añadió una pestaña **Notificaciones** para cuentas autenticadas de todos los roles ya configurados. Consulta hasta 50 avisos recientes y muestra el contador de pendientes.
+- La bandeja permite actualizar la lista y marcar avisos individuales como leídos. El frontend usa `textContent` para presentar títulos/mensajes y solo envía `read_at`; RLS y privilegios de columna siguen siendo la autoridad.
+- La consulta usa exclusivamente la tabla `public.user_notifications`; no se añadió el esquema `private` a la API.
+- Se habilitó **Carga de regreso** para conductores y propietarios, además de administradores. Usa búsqueda manual por ciudad sobre cargas publicadas; no solicita GPS, coordenadas ni proveedor externo.
+- Pruebas de base de datos en transacciones revertidas: dos avisos de prueba para dos perfiles; un usuario autenticado solo pudo marcar como leída su propia fila (1 de 2). Prueba temporal de solicitud realista: el trigger creó el aviso para la empresa y, al cambiar a `contacted` como empresa propietaria verificada, creó el aviso para el transportador. Todo se revirtió; no quedaron datos de prueba.
+- Frontend: el script JavaScript inline pasó comprobación sintáctica. No hay duplicados nuevos de IDs estáticos (el detector solo señaló una plantilla HTML dinámica preexistente). Aún falta prueba visual/interactiva con sesiones reales de conductor y empresa en navegador.
+- El preview de Vercel se genera desde la rama; no se ha promovido a producción.
