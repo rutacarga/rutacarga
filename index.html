@@ -734,6 +734,7 @@ input:focus,select:focus,textarea:focus{border-color:#075BFF;box-shadow:0 0 0 4p
 <option value="contacted">Contactados</option><option value="closed">Cerrados</option>
 </select></div>
 <p class="small" id="mensajeInteresados" aria-live="polite">Pulsa actualizar para consultar las solicitudes.</p>
+<div class="notice" id="insightEmpresa" style="margin:12px 0" aria-live="polite">El asistente empresarial preparará recomendaciones cuando actualices tus interesados.</div>
 <div id="listaInteresados"></div>
 </div>
 </section>
@@ -814,7 +815,19 @@ input:focus,select:focus,textarea:focus{border-color:#075BFF;box-shadow:0 0 0 4p
 </div>
 <div class="actions"><button class="btn secondary" id="actualizarResumenAdmin" type="button">Actualizar resumen</button></div>
 <p class="small" id="adminResumenEstado" aria-live="polite">Consultando indicadores...</p>
-<div id="adminResumenAcciones" class="small"></div>
+<div class="stats" style="margin-top:12px">
+<div class="stat">Usuarios registrados<b id="adminTotalUsuarios">—</b></div>
+<div class="stat">Empresas verificadas<b id="adminEmpresasVerificadas">—</b></div>
+<div class="stat">Conductores verificados<b id="adminConductoresVerificados">—</b></div>
+<div class="stat">Vehículos registrados<b id="adminVehiculosRegistrados">—</b></div>
+<div class="stat">Intereses totales<b id="adminInteresesTotales">—</b></div>
+<div class="stat">Tasa de contacto<b id="adminTasaContacto">—</b></div>
+</div>
+<div class="panel" style="margin-top:12px;background:var(--soft)">
+<b>Administrador IA · recomendaciones de solo lectura</b>
+<p class="small">Análisis basado en reglas y cifras consultadas. No es IA generativa y no aprueba, rechaza ni modifica registros.</p>
+<div id="adminResumenAcciones"></div>
+</div>
 </div>
 <div class="panel">
 <h2>Directorio general de usuarios</h2>
@@ -1868,20 +1881,34 @@ async function cargarResumenAdmin(){
     return count||0;
   };
   try{
-    const [empresas,conductores,cargas,intereses]=await Promise.all([
+    const [empresas,conductores,cargas,intereses,usuarios,empresasVerificadas,conductoresVerificados,vehiculos,interesesTotales,interesesContactados]=await Promise.all([
       contar("company_verifications","status","pending"),
       contar("driver_verifications","status","pending"),
       contar("company_loads","status","published"),
-      contar("load_interest_requests","status","pending")
+      contar("load_interest_requests","status","pending"),
+      contar("profiles",null,null),
+      supabaseClient.from("profiles").select("id",{count:"exact",head:true}).eq("role","company").eq("verification_status","verified").then(r=>{if(r.error)throw r.error;return r.count||0;}),
+      supabaseClient.from("profiles").select("id",{count:"exact",head:true}).in("role",["driver","owner","owner_driver"]).eq("verification_status","verified").then(r=>{if(r.error)throw r.error;return r.count||0;}),
+      contar("vehicles",null,null),
+      contar("load_interest_requests",null,null),
+      contar("load_interest_requests","status","contacted")
     ]);
     $("adminEmpresasPendientes").textContent=empresas;
     $("adminConductoresPendientes").textContent=conductores;
     $("adminCargasPublicadas").textContent=cargas;
     $("adminInteresesPendientes").textContent=intereses;
+    $("adminTotalUsuarios").textContent=usuarios;
+    $("adminEmpresasVerificadas").textContent=empresasVerificadas;
+    $("adminConductoresVerificados").textContent=conductoresVerificados;
+    $("adminVehiculosRegistrados").textContent=vehiculos;
+    $("adminInteresesTotales").textContent=interesesTotales;
+    $("adminTasaContacto").textContent=(interesesTotales?Math.round(interesesContactados/interesesTotales*100):0)+"%";
     const recomendaciones=[];
     if(empresas)recomendaciones.push("Revisar "+empresas+" solicitud(es) pendiente(s) de empresa.");
     if(conductores)recomendaciones.push("Revisar "+conductores+" solicitud(es) pendiente(s) de conductor.");
     if(intereses)recomendaciones.push("Hay "+intereses+" interés(es) pendiente(s) de respuesta empresarial.");
+    if(interesesTotales&&interesesContactados/interesesTotales<0.5)recomendaciones.push("La tasa global de contacto es inferior al 50%; revisa tiempos de respuesta y seguimiento.");
+    if(!empresasVerificadas)recomendaciones.push("No hay empresas verificadas registradas; prioriza la revisión de solicitudes empresariales.");
     if(!cargas)recomendaciones.push("No hay cargas publicadas en este momento; conviene revisar la activación de empresas verificadas.");
     if(!recomendaciones.length)recomendaciones.push("No se detectan pendientes prioritarios en estos indicadores.");
     const lista=document.createElement("ul");lista.style.paddingLeft="20px";
@@ -2275,7 +2302,19 @@ async function cargarInteresadosEmpresa(){
   $("totalContactados").textContent=totales.contacted;
   $("totalCerrados").textContent=totales.closed;
   $("totalSolicitudes").textContent=solicitudes.length;
-  $("tasaContacto").textContent=(solicitudes.length?Math.round(totales.contacted/solicitudes.length*100):0)+"%";
+  const tasa=solicitudes.length?Math.round(totales.contacted/solicitudes.length*100):0;
+  $("tasaContacto").textContent=tasa+"%";
+  const insight=$("insightEmpresa");
+  if(insight){
+    const misCargas=cargasReales.filter(c=>c.company_id===usuarioActual.id).length;
+    const mensajes=[];
+    if(!misCargas)mensajes.push("Publica tu primera carga para empezar a recibir interesados.");
+    else if(!solicitudes.length)mensajes.push("Tienes "+misCargas+" carga(s) publicada(s) y aún no registras interesados. Revisa que la ruta, fecha, tipo de carga y pago estén completos y competitivos.");
+    if(totales.pending)mensajes.push("Tienes "+totales.pending+" solicitud(es) pendiente(s): revisa y responde oportunamente.");
+    if(solicitudes.length&&tasa<50)mensajes.push("Tu tasa de contacto es "+tasa+"%. Da seguimiento a las solicitudes pendientes.");
+    if(!mensajes.length)mensajes.push("Tu actividad está al día según los datos disponibles. Mantén actualizadas tus publicaciones y responde a los transportadores.");
+    insight.textContent="Recomendaciones automáticas: "+mensajes.join(" ");
+  }
   const filtro=$("filtroInteresados").value;
   const visibles=filtro==="all"?solicitudes:solicitudes.filter(s=>s.status===filtro);
   mensaje.textContent=solicitudes.length?"Solicitudes recibidas: "+solicitudes.length+" · Mostrando: "+visibles.length:"Todavía no hay transportadores interesados en tus cargas.";
