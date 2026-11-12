@@ -188,3 +188,16 @@ Preparar la arquitectura y la primera versión determinista de emparejamiento en
 - La etiqueta Administrador IA se presenta con transparencia: esta versión es análisis basado en reglas, no IA generativa ni agente con permisos de acción.
 - Sin migraciones ni escrituras nuevas en Supabase. Las consultas usan los permisos RLS existentes y datos ya visibles al rol correspondiente.
 - JavaScript inline validado sintácticamente e IDs estáticos sin duplicados. No se ha ejecutado E2E con sesión real de empresa ni administrador; las métricas dependen de los registros visibles y deben validarse en preview.
+
+
+## Seguimiento operativo — tiempo al primer contacto (2026-11-12)
+- Se añadió al panel empresarial y al resumen administrativo una métrica de **mediana entre recepción de la solicitud y primer evento contacted**.
+- El cálculo usa únicamente load_interest_requests.created_at y el primer evento load_interest_status_history.changed_at con new_status='contacted'; no utiliza el estado actual como sustituto del historial.
+- Se requieren al menos cinco casos medibles para mostrar un tiempo. Por debajo de ese umbral se informa “Muestra insuficiente (n/5)”; se muestra siempre el tamaño de muestra y se aclara que no es un SLA ni una promesa.
+- En el panel empresarial el indicador se calcula sobre todas las solicitudes de esa empresa, sin cambiar según el filtro visual de estado.
+- En el resumen administrativo se consultan como máximo las 1.000 solicitudes recientes y sus eventos de primer contacto; el indicador declara ese límite.
+- No se añadió tabla, RPC, trigger ni permiso nuevo. La lectura administrativa de historial está respaldada por la política RLS existente para administradores; la empresa solo consulta su propio historial.
+- Verificación del estado actual: load_interest_requests tiene 0 filas y load_interest_status_history tiene 0 eventos en la consulta de revisión. Por tanto, no existe aún muestra real para calcular tiempos; la UI debe mostrar muestra insuficiente, no inventar un tiempo.
+- Validación: script JavaScript inline pasó análisis sintáctico después del cambio. Falta probar la métrica visualmente con sesiones reales de empresa y administrador y verificar el preview recién construido.
+- Producción sigue sin cambios.
+
