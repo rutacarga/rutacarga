@@ -195,7 +195,7 @@ Preparar la arquitectura y la primera versión determinista de emparejamiento en
 - El cálculo usa únicamente load_interest_requests.created_at y el primer evento load_interest_status_history.changed_at con new_status='contacted'; no utiliza el estado actual como sustituto del historial.
 - Se requieren al menos cinco casos medibles para mostrar un tiempo. Por debajo de ese umbral se informa “Muestra insuficiente (n/5)”; se muestra siempre el tamaño de muestra y se aclara que no es un SLA ni una promesa.
 - En el panel empresarial el indicador se calcula sobre todas las solicitudes de esa empresa, sin cambiar según el filtro visual de estado.
-- En el resumen administrativo se consultan como máximo las 1.000 solicitudes recientes y sus eventos de primer contacto; el indicador declara ese límite.
+- En el resumen administrativo se consultan como máximo las 100 solicitudes recientes y sus eventos de primer contacto; el indicador declara ese límite.
 - No se añadió tabla, RPC, trigger ni permiso nuevo. La lectura administrativa de historial está respaldada por la política RLS existente para administradores; la empresa solo consulta su propio historial.
 - Verificación del estado actual: load_interest_requests tiene 0 filas y load_interest_status_history tiene 0 eventos en la consulta de revisión. Por tanto, no existe aún muestra real para calcular tiempos; la UI debe mostrar muestra insuficiente, no inventar un tiempo.
 - Validación: script JavaScript inline pasó análisis sintáctico después del cambio. Falta probar la métrica visualmente con sesiones reales de empresa y administrador y verificar el preview recién construido.
