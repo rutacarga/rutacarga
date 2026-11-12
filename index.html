@@ -2365,7 +2365,7 @@ async function cargarInteresadosEmpresa(){
   const {data:historialData,error:errorHistorial}=await supabaseClient
     .from("load_interest_status_history")
     .select("request_id,old_status,new_status,changed_at")
-    .in("request_id",visibles.map(s=>s.id))
+    .in("request_id",solicitudes.map(s=>s.id))
     .order("changed_at",{ascending:true});
   if(errorHistorial){console.error("No se pudo consultar el historial:",errorHistorial.message);}
   (historialData||[]).forEach(h=>{
