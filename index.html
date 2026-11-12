@@ -967,7 +967,7 @@ googleLogin.addEventListener("click",async()=>{
   googleLogin.disabled=true;
   const {error}=await supabaseClient.auth.signInWithOAuth({
     provider:"google",
-    options:{redirectTo:"https://rutacarga.com.co"}
+    options:{redirectTo:window.location.origin}
   });
   if(error){
     estadoAcceso.textContent="No se pudo iniciar sesión: "+error.message;
