@@ -571,7 +571,7 @@ input:focus,select:focus,textarea:focus{border-color:#075BFF;box-shadow:0 0 0 4p
 <section id="retorno" class="view hidden">
 <div class="panel">
 <h2>Busca carga para tu regreso</h2>
-<p class="small">Encuentra oportunidades para evitar regresar con el tractocamión vacío.</p>
+<p class="small">Busca cargas publicadas desde donde terminas tu viaje hacia tu siguiente destino o ciudad de regreso. La búsqueda usa las ciudades registradas por las empresas; no requiere GPS.</p>
 <div class="grid">
 <div><label>Estoy en</label><input id="retOrigen" placeholder="Escribe cualquier lugar de Colombia"></div>
 <div><label>Quiero regresar a</label><input id="retDestino" placeholder="Escribe cualquier lugar de Colombia"></div>
@@ -1268,7 +1268,7 @@ function configurarPanelPorRol(){
   const esEmpresa=rolUsuario==="company";
   const tabs={
     buscar:esAdministrador||esConductor||esPropietario,
-    retorno:esAdministrador,
+    retorno:esAdministrador||esConductor||esPropietario,
     rentabilidad:esAdministrador,
     perfil:esAdministrador||esConductor||esPropietario||esEmpresa,
     verificacionConductor:esAdministrador||esConductor,
