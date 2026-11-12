@@ -546,6 +546,8 @@ input:focus,select:focus,textarea:focus{border-color:#075BFF;box-shadow:0 0 0 4p
 <div class="actions">
 <button class="btn" id="filtrar">Buscar cargas</button>
 <button class="btn secondary" id="limpiar">Limpiar</button>
+<button class="btn secondary hidden" id="coincidenciasVehiculo" type="button" aria-pressed="false">Ver coincidencias para mis vehículos</button>
+<p class="small" id="estadoCoincidencias" aria-live="polite"></p>
 </div>
 </div>
 <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
@@ -837,6 +839,7 @@ let puedePublicarCargas=false;
 let conductorVerificado=false;
 let cargasReales=[];
 let vehiculosCuenta=[];
+let modoCoincidencias=false;
 
 document.querySelectorAll("[data-account-role]").forEach(boton=>{
   boton.addEventListener("click",async()=>{
@@ -915,6 +918,12 @@ async function cargarPerfilDesdeSupabase(user){
 
   vehiculosCuenta=vehiculos||[];
   pintarSelectorVehiculos();
+  const botonCoincidencias=$("coincidenciasVehiculo");
+  if(botonCoincidencias){
+    const mostrar=[ "driver","owner","owner_driver" ].includes(rolUsuario)&&vehiculosCuenta.length>0;
+    botonCoincidencias.classList.toggle("hidden",!mostrar);
+    if(!mostrar){modoCoincidencias=false;botonCoincidencias.setAttribute("aria-pressed","false");}
+  }
   if(vehiculosCuenta.length){$("vehiculoSeleccionado").value=vehiculosCuenta[0].id;cargarVehiculoEnFormulario(vehiculosCuenta[0].id);mensaje.textContent="Se recuperaron "+vehiculosCuenta.length+" vehículo(s) de tu cuenta.";}else{$("vehiculoSeleccionado").value="";limpiarFormularioVehiculo();mensaje.textContent="Tu cuenta está lista. Registra tu primer vehículo.";}
 }
 
@@ -1739,6 +1748,45 @@ function coincide(lugar,busqueda){
   return !busqueda||normalizar(lugar).includes(normalizar(busqueda));
 }
 
+function calcularAfinidadCarga(carga){
+  const compatiblesCarroceria={
+    estacas:["general","estibas"],
+    furgon:["general","estibas"],
+    planchon:["general","estibas"],
+    portacontenedor:["contenedor"],
+    volco:["granel"],
+    tanque:["granel"],
+    refrigerada:["refrigerada"]
+  };
+  const vehiculos=vehiculosCuenta.filter(v=>v.availability!=="unavailable"&&v.availability!=="busy");
+  if(!vehiculos.length)return {score:0,razones:[],placa:""};
+  const opciones=vehiculos.map(v=>{
+    let puntos=0,peso=0;
+    const razones=[];
+    const configuracion=normalizar(v.configuration);
+    const tipoVehiculo=normalizar(carga.v);
+    if(tipoVehiculo==="tractocamion"&&configuracion&&configuracion!=="otra"){
+      peso+=35;
+      if(["2s1","2s2","3s2","3s3"].includes(configuracion)){puntos+=35;razones.push("Configuración de tractocamión");}
+    }
+    const carroceria=normalizar(v.body_type),tipoCarga=normalizar(carga.t);
+    if(carroceria&&tipoCarga&&compatiblesCarroceria[carroceria]){
+      peso+=25;
+      if(compatiblesCarroceria[carroceria].includes(tipoCarga)){puntos+=25;razones.push("Carrocería compatible");}
+    }
+    if(v.city&&carga.o){
+      peso+=30;
+      if(normalizar(v.city)===normalizar(carga.o)){puntos+=30;razones.push("Origen en tu ciudad");}
+    }
+    if(v.availability){
+      peso+=10;
+      if(normalizar(v.availability)==="available"){puntos+=10;razones.push("Vehículo disponible");}
+    }
+    return {score:peso?Math.round(puntos/peso*100):0,razones,placa:v.plate||""};
+  });
+  return opciones.sort((a,b)=>b.score-a.score)[0];
+}
+
 function tarjeta(x){
   const etiqueta="CARGA REAL";
   const detalle=x.description||"Publicación de empresa transportadora verificada.";
@@ -1746,6 +1794,12 @@ function tarjeta(x){
   if(x.real&&x.whatsapp){
     const mensaje=encodeURIComponent("Hola, vi tu carga en RUTA CARGA: "+x.o+" → "+x.d+". ¿Sigue disponible?");
     contacto='<div class="actions"><a class="btn success" href="https://wa.me/'+escaparHTML(x.whatsapp)+'?text='+mensaje+'" target="_blank" rel="noopener noreferrer" style="text-decoration:none;display:inline-block">Contactar por WhatsApp</a></div>';
+  }
+  let afinidadHtml="";
+  if(modoCoincidencias&&usuarioActual&&["driver","owner","owner_driver"].includes(rolUsuario)){
+    const afinidad=calcularAfinidadCarga(x);
+    const razones=afinidad.razones.length?afinidad.razones.join(" · "):"No hay criterios suficientes para confirmar compatibilidad.";
+    afinidadHtml='<p class="small"><b>Afinidad orientativa: '+afinidad.score+'/100</b> · '+escaparHTML(razones)+'</p>';
   }
   let interes="";
   if(x.real&&usuarioActual&&x.company_id!==usuarioActual.id&&["driver","owner","owner_driver"].includes(rolUsuario)){
@@ -1758,6 +1812,7 @@ function tarjeta(x){
   return '<article class="load">'+
   '<div class="route">'+escaparHTML(x.o)+' <span>→</span> '+escaparHTML(x.d)+'</div>'+
   '<div class="meta"><span class="chip">'+escaparHTML(x.t)+'</span><span class="chip">'+escaparHTML(x.v||"Tractocamión")+'</span><span class="chip">Cargue: '+escaparHTML(x.f||"Por confirmar")+'</span><span class="chip">'+etiqueta+'</span></div>'+
+  afinidadHtml+
   '<div class="price">'+dinero(x.p)+'</div>'+
   '<p class="small">'+escaparHTML(detalle)+'</p>'+
   contacto+
@@ -1766,8 +1821,9 @@ function tarjeta(x){
 }
 
 function pintar(lista=todas()){
-  $("cards").innerHTML=lista.length?lista.map(tarjeta).join(""):'<div class="empty">No encontramos oportunidades con esos filtros.</div>';
-  $("contador").textContent=lista.length+" cargas reales";
+  const visibles=modoCoincidencias?lista.slice().sort((a,b)=>calcularAfinidadCarga(b).score-calcularAfinidadCarga(a).score):lista;
+  $("cards").innerHTML=visibles.length?visibles.map(tarjeta).join(""):'<div class="empty">No encontramos oportunidades con esos filtros.</div>';
+  $("contador").textContent=visibles.length+" cargas reales";
 }
 
 $("abrirRegistroEmpresa").onclick=()=>document.querySelector('.tab[data-tab="empresa"]').click();
@@ -1786,6 +1842,20 @@ document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{
 $("filtrar").onclick=()=>{
   const o=$("origen").value,d=$("destino").value,t=$("tipo").value,f=$("fecha").value;  pintar(todas().filter(x=>coincide(x.o,o)&&coincide(x.d,d)&&(!t||x.t===t)&&(!f||x.f===f)));
 };
+
+$("coincidenciasVehiculo").addEventListener("click",()=>{
+  if(!usuarioActual||!["driver","owner","owner_driver"].includes(rolUsuario)||!vehiculosCuenta.length){
+    $("estadoCoincidencias").textContent="Registra un vehículo para activar las coincidencias.";
+    return;
+  }
+  modoCoincidencias=!modoCoincidencias;
+  $("coincidenciasVehiculo").setAttribute("aria-pressed",String(modoCoincidencias));
+  $("coincidenciasVehiculo").textContent=modoCoincidencias?"Mostrar todas las cargas":"Ver coincidencias para mis vehículos";
+  $("estadoCoincidencias").textContent=modoCoincidencias
+    ?"Ordenamos las cargas según vehículo, carrocería, ciudad y disponibilidad. Es una orientación inicial, no una garantía."
+    :"Mostrando nuevamente todas las cargas publicadas.";
+  pintar(todas());
+});
 
 $("limpiar").onclick=()=>{
   ["origen","destino","tipo","fecha"].forEach(id=>$(id).value="");
