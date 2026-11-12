@@ -28,6 +28,13 @@ Rama de trabajo: `feature/roadmap-inteligencia-etapas`
 - El flujo actual no usa carga de documentos desde el frontend. No asumir que existen consentimientos de marketing, notificaciones ni permisos de WhatsApp.
 - El panel administrativo ya consulta verificaciones, usuarios, cargas, solicitudes e historiales; el panel de empresa ya lista publicaciones e interesados.
 
+## Avance de la primera etapa en preview
+- Emparejamiento de cargas: primera versión de reglas en frontend, sin escrituras ni servicios externos. La puntuación representa coincidencias confirmadas sobre 100 y advierte que no usa GPS ni valida el tipo exacto del vehículo.
+- Panel empresarial: añade total de solicitudes y tasa de contacto a los indicadores existentes.
+- Administrador IA inicial: panel de resumen operativo en solo lectura, con conteos de pendientes y recomendaciones basadas en reglas. No ejecuta acciones ni utiliza todavía un modelo generativo.
+- La rama de preview se despliega como preview independiente; la producción no se ha actualizado con estos cambios de interfaz.
+- Validación técnica: JavaScript pasó comprobación sintáctica. El despliegue Vercel de la rama está en estado READY. Aún falta la prueba de interacción real con cuentas de conductor, empresa y administrador.
+
 ## Etapas y dependencias
 
 ### Etapa 0 — Base segura y observabilidad (sin cambios visibles en producción)
