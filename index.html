@@ -535,7 +535,17 @@ input:focus,select:focus,textarea:focus{border-color:#075BFF;box-shadow:0 0 0 4p
 <button class="tab hidden" id="tabNotificaciones" data-tab="notificaciones">Notificaciones <span id="contadorNotificaciones" aria-label="notificaciones sin leer">0</span></button>
 <button class="tab" id="tabServicios" data-tab="servicios">Servicios complementarios</button>
 <button class="tab" id="tabAsistente" data-tab="asistente">Asistente 24/7</button>
+<button class="tab hidden" id="tabAlertas" data-tab="alertas">Alertas inteligentes <span id="contadorAlertas">0</span></button>
 </div>
+
+<section id="alertas" class="view hidden">
+<div class="panel">
+<h2>Alertas inteligentes de cargas</h2>
+<p class="small">Oportunidades ordenadas según los datos de tus vehículos registrados: configuración, carrocería, ciudad habitual y disponibilidad. Son sugerencias calculadas al consultar la plataforma; no son notificaciones push ni garantizan aceptación o compatibilidad legal/técnica.</p>
+<div class="actions"><button class="btn secondary" id="actualizarAlertas" type="button">Actualizar coincidencias</button><span class="small" id="estadoAlertas" aria-live="polite">Consultando oportunidades...</span></div>
+<div class="cards" id="listaAlertas"></div>
+</div>
+</section>
 
 <section id="notificaciones" class="view hidden">
   <div class="panel">
@@ -1358,7 +1368,8 @@ function configurarPanelPorRol(){
     administracion:esAdministrador,
     notificaciones:true,
     servicios:true,
-    asistente:true
+    asistente:true,
+    alertas:esConductor||esPropietario
   };
   document.querySelectorAll(".tab").forEach(tab=>{
     const key=tab.dataset.tab;
@@ -2082,6 +2093,30 @@ document.querySelectorAll(".preguntaAsistente").forEach(button=>button.addEventL
   responderAsistente();
 }));
 
+
+function actualizarAlertasInteligentes(){
+  const lista=$("listaAlertas"),estado=$("estadoAlertas"),contador=$("contadorAlertas");
+  if(!lista||!estado||!contador)return;
+  if(!usuarioActual||![ "driver","owner","owner_driver" ].includes(rolUsuario)){
+    lista.replaceChildren();estado.textContent="Inicia sesión con una cuenta de conductor o propietario para consultar coincidencias.";contador.textContent="0";return;
+  }
+  if(!vehiculosCuenta.length){
+    lista.replaceChildren();estado.textContent="Registra al menos un vehículo en Mi vehículo para activar las alertas.";contador.textContent="0";return;
+  }
+  const coincidencias=todas().map(c=>({c,a:calcularAfinidadCarga(c)}))
+    .filter(x=>x.a.score>=50)
+    .sort((x,y)=>y.a.score-x.a.score||String(x.c.f||"").localeCompare(String(y.c.f||"")));
+  contador.textContent=String(coincidencias.length);
+  estado.textContent=coincidencias.length
+    ? coincidencias.length+" oportunidad(es) con afinidad orientativa de 50/100 o más."
+    : "No encontramos coincidencias con los datos actuales. Revisa la disponibilidad, ciudad y características de tus vehículos.";
+  if(!coincidencias.length){lista.innerHTML='<div class="empty">No hay alertas de coincidencias por ahora.</div>';return;}
+  const anterior=modoCoincidencias;modoCoincidencias=true;
+  lista.innerHTML=coincidencias.slice(0,8).map(x=>tarjeta(x.c)).join("");
+  modoCoincidencias=anterior;
+}
+$("actualizarAlertas").addEventListener("click",actualizarAlertasInteligentes);
+
 document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{
   if(b.dataset.tab==="administracion"&&!esAdministrador) return;
   document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active",x===b));
@@ -2093,6 +2128,7 @@ document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{
   if(b.dataset.tab==="verificacionConductor"&&usuarioActual) cargarSolicitudConductor(usuarioActual);
   if(b.dataset.tab==="notificaciones"&&usuarioActual) cargarNotificaciones();
   if(b.dataset.tab==="asistente") $("preguntaAsistente").focus();
+  if(b.dataset.tab==="alertas") actualizarAlertasInteligentes();
 });
 
 $("filtrar").onclick=()=>{
@@ -2111,6 +2147,7 @@ $("coincidenciasVehiculo").addEventListener("click",()=>{
     ?"Ordenamos las cargas según vehículo, carrocería, ciudad y disponibilidad. Es una orientación inicial, no una garantía."
     :"Mostrando nuevamente todas las cargas publicadas.";
   pintar(todas());
+  actualizarAlertasInteligentes();
 });
 
 $("limpiar").onclick=()=>{
