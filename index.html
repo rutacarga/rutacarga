@@ -436,25 +436,37 @@ input:focus,select:focus,textarea:focus{border-color:#D71920;box-shadow:0 0 0 4p
 }
 
 
-/* Ajuste integral de identidad RUTA CARGA: rojo + negro */
-:root{color-scheme:light;--navy:#101010;--blue:#242424;--orange:#D71920;--orange-dark:#A30F17;--bg:#F5F5F5;--surface:#fff;--ink:#171717;--muted:#666;--line:#E3E3E3}
-body{background:linear-gradient(180deg,#fff 0%,#F5F5F5 100%);color:#171717}
-header{background:linear-gradient(112deg,#050505 0%,#171717 68%,#292929 100%);border-bottom:4px solid #D71920}
-header:after{background:rgba(215,25,32,.24)}
-.brand-word span:last-child,.brand-hero h1 em,.route span{color:#D71920}
-.brand-hero-inner{border-color:#383838}
-.brand-hero-inner:before{background:linear-gradient(90deg,rgba(0,0,0,.96) 0%,rgba(18,18,18,.88) 43%,rgba(30,10,11,.32) 100%)}
-.tab.active{background:linear-gradient(120deg,#080808,#292929);border-color:#D71920}
-.btn{background:linear-gradient(120deg,#A90F17,#E21B25);box-shadow:0 5px 13px rgba(180,15,25,.2)}
-.btn:hover{box-shadow:0 8px 18px rgba(180,15,25,.27)}
-.btn.secondary{color:#171717;background:#F1F1F1;border-color:#D8D8D8}
-.btn.secondary:hover{background:#E8E8E8}
-input:focus,select:focus,textarea:focus{border-color:#D71920;box-shadow:0 0 0 4px rgba(215,25,32,.13)}
-.tab:hover{color:#A30F17;border-color:#E6A0A3}
-.panel:hover,.load:hover,.request:hover{border-color:#E3A3A6}
-#panelSeleccionRol{background:linear-gradient(130deg,#FFF2F2,#fff 62%,#F5F5F5);border-color:#E8B8BA}
-#panelRegistroEmpresa{background:linear-gradient(145deg,#fff,#FCFCFC)}
-:focus-visible{outline-color:rgba(215,25,32,.58)}
+
+/* Identidad visual RUTA CARGA: naranja + azul eléctrico + blanco */
+:root{
+  color-scheme:light;
+  --navy:#075BFF;
+  --blue:#075BFF;
+  --orange:#FF7A00;
+  --orange-dark:#E96500;
+  --bg:#F4F8FF;
+  --surface:#FFFFFF;
+  --ink:#10213A;
+  --muted:#5D6B82;
+  --line:#DCE6F5;
+}
+body{background:linear-gradient(180deg,#FFFFFF 0%,#F4F8FF 100%);color:#10213A}
+header{background:linear-gradient(112deg,#0347D8 0%,#075BFF 58%,#3980FF 100%);border-bottom:4px solid #FF7A00}
+header:after{background:rgba(255,122,0,.30)}
+.brand-word span:last-child,.brand-hero h1 em,.route span{color:#FF9A32}
+.brand-hero-inner{border-color:rgba(255,255,255,.32)}
+.brand-hero-inner:before{background:linear-gradient(90deg,rgba(3,55,165,.97) 0%,rgba(7,91,255,.86) 43%,rgba(255,122,0,.22) 100%)}
+.tab.active{background:linear-gradient(120deg,#0347D8,#075BFF);border-color:#FF7A00;color:#fff}
+.btn{background:linear-gradient(120deg,#F06A00,#FF8A00);box-shadow:0 5px 13px rgba(255,122,0,.24);color:#fff}
+.btn:hover{background:linear-gradient(120deg,#E96500,#FF9A22);box-shadow:0 8px 18px rgba(255,122,0,.30)}
+.btn.secondary{color:#075BFF;background:#fff;border-color:#B9D0FF}
+.btn.secondary:hover{background:#EDF4FF}
+input:focus,select:focus,textarea:focus{border-color:#075BFF;box-shadow:0 0 0 4px rgba(7,91,255,.13)}
+.tab:hover{color:#075BFF;border-color:#FFB36B}
+.panel:hover,.load:hover,.request:hover{border-color:#8EB4FF}
+#panelSeleccionRol{background:linear-gradient(130deg,#EDF4FF,#fff 62%,#FFF4E8);border-color:#B9D0FF}
+#panelRegistroEmpresa{background:linear-gradient(145deg,#fff,#F4F8FF)}
+:focus-visible{outline-color:rgba(7,91,255,.62)}
 
 </style>
 </head>
