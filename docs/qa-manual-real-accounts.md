@@ -68,3 +68,26 @@ El preview Vercel se construye desde la rama de desarrollo, pero la aplicación 
 
 ## Registro de evidencia
 Por cada caso registrar: fecha/hora, perfil, navegador/dispositivo, pasos, resultado esperado, resultado observado, captura sin datos personales y referencia del error. No copiar tokens, documentos ni datos de terceros en tickets.
+
+## Hallazgos de aislamiento de entornos — 2026-11-11
+
+Inspección de solo lectura de la configuración conectada:
+
+- Supabase solo muestra el proyecto `RUTA CARGA` (`hnnjdtisekgacydcsvzd`) en la organización actual.
+- La lista de ramas de desarrollo de ese proyecto está vacía.
+- La organización Supabase está en plan Free.
+- Vercel no devuelve variables de entorno configuradas para el proyecto `rutacarga`.
+- El `index.html` de esta rama define directamente `SUPABASE_URL` con el host del proyecto `hnnjdtisekgacydcsvzd`; por tanto, el preview comparte backend con ese proyecto y NO constituye un entorno aislado.
+- La clave pública/anon del cliente está embebida en el frontend, como corresponde a un cliente público; nunca debe sustituirse por una clave secreta o service_role.
+
+### Decisión de QA
+
+Hasta disponer de un proyecto Supabase de staging independiente:
+
+1. Se permiten inspección de código, validación estática y navegación visual que no escriba datos.
+2. No ejecutar desde preview altas, cambios de perfil, solicitudes de interés, publicaciones, verificaciones, cambios de estado, lectura de documentos privados ni acciones administrativas que puedan alterar datos.
+3. No crear ramas/proyectos Supabase ni activar recursos con costo sin revisar primero el costo y obtener autorización específica.
+4. Para habilitar E2E, configurar un backend de staging aislado y cuentas sintéticas por rol; después revisar que el frontend de preview apunte exclusivamente a ese backend antes de probar escrituras.
+5. No solicitar contraseñas al usuario. Las sesiones de QA deben prepararse mediante el flujo de acceso normal y con cuentas de prueba autorizadas.
+
+Este hallazgo bloquea pruebas E2E con escrituras; no bloquea el trabajo de revisión estática ni modifica producción.
