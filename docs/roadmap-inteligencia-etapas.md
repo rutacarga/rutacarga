@@ -172,3 +172,11 @@ Preparar la arquitectura y la primera versión determinista de emparejamiento en
 - Las respuestas se muestran con textContent; no se envían preguntas a proveedores externos ni se transmiten datos personales. No se conecta a LLM, WhatsApp, correo ni APIs de pago.
 - No puede consultar estados privados, aprobar usuarios, modificar cargas, negociar tarifas ni efectuar pagos. Las consultas no reconocidas se derivan a las secciones correspondientes o al equipo de RUTA CARGA.
 - JavaScript inline y unicidad de IDs estáticos comprobados después del cambio. Falta prueba interactiva con navegador y sesiones reales; sigue siendo preview aislado.
+
+
+## Avance — emparejamiento y alertas inteligentes (2026-11-12 UTC)
+- Se añadió una pestaña **Alertas inteligentes** para conductores y propietarios. Calcula en el navegador coincidencias orientativas a partir de cargas publicadas y vehículos propios: configuración registrada, carrocería frente al tipo de carga, ciudad habitual frente al origen y disponibilidad.
+- Muestra hasta 8 oportunidades con afinidad de 50/100 o más y permite actualizar el cálculo. Las tarjetas usan la misma información de cargas publicada ya visible en Buscar cargas.
+- No crea solicitudes de interés, no contacta empresas, no reserva cargas, no altera datos ni envía avisos externos. Es un panel calculado al abrir/actualizar, no una notificación push ni una promesa de compatibilidad técnica o legal.
+- No se cambió el esquema ni se escribieron datos en Supabase. El umbral y ponderaciones son orientativos; deben validarse con operaciones reales antes de convertirlos en reglas comerciales.
+- JavaScript inline comprobado sintácticamente y IDs estáticos sin duplicados. Falta prueba E2E con sesiones reales y validación de los resultados con conductores y empresas.
