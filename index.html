@@ -683,7 +683,11 @@ input:focus,select:focus,textarea:focus{border-color:#075BFF;box-shadow:0 0 0 4p
 <p class="small">Solicita tu verificación con los datos básicos de tu cuenta. No necesitas adjuntar archivos ni fotografías.</p>
 <div id="estadoVerificacionConductor" aria-live="polite" class="small">Consultando tu estado de verificación...</div>
 <div id="formularioVerificacionConductor">
-<div class="notice" style="margin-top:14px">RUTA CARGA revisará tu solicitud con los datos de tu perfil. No necesitas adjuntar archivos.</div>
+<div class="grid" style="margin-top:14px">
+<div><label for="cedulaConductor">Número de cédula *</label><input id="cedulaConductor" inputmode="numeric" autocomplete="off" maxlength="20" placeholder="Número de identificación"></div>
+<div><label for="celularConductor">Celular o WhatsApp *</label><input id="celularConductor" type="tel" inputmode="tel" autocomplete="tel" maxlength="16" placeholder="+573001234567"></div>
+</div>
+<div class="notice" style="margin-top:14px">Estos datos son privados y solo estarán disponibles para ti y el equipo administrador durante la verificación. No necesitas adjuntar archivos.</div>
 <button class="btn" id="enviarVerificacionConductor" type="button">Solicitar verificación</button>
 <p class="small" id="mensajeVerificacionConductor" aria-live="polite"></p>
 </div>
@@ -1150,21 +1154,32 @@ async function cargarSolicitudConductor(user){
   boton.textContent="Solicitar verificación";
   mensaje.textContent="";
 
-  const {data,error}=await supabaseClient
-    .from("driver_verifications")
-    .select("status,submitted_at,review_notes,reviewed_at")
-    .eq("user_id",user.id)
-    .maybeSingle();
+  const [{data,error},{data:datos,error:errorDatos}]=await Promise.all([
+    supabaseClient.from("driver_verifications")
+      .select("status,submitted_at,review_notes,reviewed_at")
+      .eq("user_id",user.id).maybeSingle(),
+    supabaseClient.from("driver_verification_private_data")
+      .select("national_id,phone_whatsapp")
+      .eq("user_id",user.id).maybeSingle()
+  ]);
 
   if(error){
     estado.textContent="No se pudo consultar tu verificación: "+error.message;
     pintar();
     return;
   }
+  if(errorDatos){
+    estado.textContent="No se pudieron consultar tus datos privados: "+errorDatos.message;
+    formulario.classList.add("hidden");
+    pintar();
+    return;
+  }
+  $("cedulaConductor").value=datos?.national_id||"";
+  $("celularConductor").value=datos?.phone_whatsapp||"";
 
   if(!data){
     conductorVerificado=false;
-    estado.innerHTML='<span class="status">Sin solicitud</span><p class="small">Todavía no has solicitado la verificación.</p>';
+    estado.innerHTML='<span class="status">Sin solicitud</span><p class="small">Completa tu cédula y celular para solicitar la verificación.</p>';
     actualizarResumenConfianza();
     pintar();
     return;
@@ -1187,14 +1202,18 @@ async function cargarSolicitudConductor(user){
 
   const puedeReenviar=data.status==="rejected"||data.status==="not_submitted";
   formulario.classList.toggle("hidden",!puedeReenviar);
+  $("cedulaConductor").disabled=!puedeReenviar;
+  $("celularConductor").disabled=!puedeReenviar;
+  boton.disabled=!puedeReenviar;
+  boton.textContent=data.status==="rejected"?"Enviar solicitud corregida":"Solicitar verificación";
   if(data.status==="pending"){
-    mensaje.textContent="Tu solicitud está en revisión. No necesitas enviarla nuevamente.";
+    mensaje.textContent="Tu solicitud está en revisión. Tus datos están bloqueados mientras se evalúa.";
   }else if(data.status==="verified"){
     mensaje.textContent="Tu cuenta está verificada. Ya puedes manifestar interés en cargas reales.";
   }else if(data.status==="suspended"){
     mensaje.textContent="Tu verificación está suspendida. Comunícate con RUTA CARGA.";
   }else if(data.status==="rejected"){
-    mensaje.textContent="Puedes corregir los datos y presentar una nueva solicitud.";
+    mensaje.textContent="Puedes corregir tus datos y presentar una nueva solicitud.";
   }
   pintar();
 }
@@ -1232,14 +1251,29 @@ async function cargarSolicitudesConductoresAdmin(){
 
   mensaje.textContent="Solicitudes encontradas: "+data.length;
   const estados={pending:"Pendiente de revisión",verified:"Aprobado",rejected:"Rechazado",suspended:"Suspendido",not_submitted:"No enviada"};
+  const ids=data.map(x=>x.user_id);
+  const [{data:perfiles,error:errorPerfiles},{data:datosPrivados,error:errorPrivados}]=await Promise.all([
+    supabaseClient.from("profiles").select("id,full_name").in("id",ids),
+    supabaseClient.from("driver_verification_private_data").select("user_id,national_id,phone_whatsapp").in("user_id",ids)
+  ]);
+  if(errorPerfiles||errorPrivados){
+    mensaje.textContent="Solicitudes consultadas, pero no se pudieron cargar los datos privados de verificación: "+(errorPerfiles?.message||errorPrivados?.message);
+    return;
+  }
+  const nombres=new Map((perfiles||[]).map(x=>[x.id,x.full_name]));
+  const privados=new Map((datosPrivados||[]).map(x=>[x.user_id,x]));
 
   for(const solicitud of data){
     const tarjeta=document.createElement("article");
     tarjeta.className="request";
     const fecha=solicitud.submitted_at?new Date(solicitud.submitted_at).toLocaleString("es-CO"):"No disponible";
+    const privado=privados.get(solicitud.user_id);
     tarjeta.innerHTML=
       '<span class="status '+escaparHTML(solicitud.status)+'">'+escaparHTML(estados[solicitud.status]||solicitud.status)+'</span>'+
       '<h3>Solicitud de conductor</h3>'+
+      '<p class="small"><b>Nombre:</b> '+escaparHTML(nombres.get(solicitud.user_id)||"No registrado")+'</p>'+
+      '<p class="small"><b>Cédula:</b> '+escaparHTML(privado?.national_id||"No registrada")+'</p>'+
+      '<p class="small"><b>Celular / WhatsApp:</b> '+escaparHTML(privado?.phone_whatsapp||"No registrado")+'</p>'+
       '<p class="small"><b>Usuario:</b> '+escaparHTML(solicitud.user_id)+'</p>'+
       '<p class="small"><b>Fecha de envío:</b> '+escaparHTML(fecha)+'</p>'+
       (solicitud.review_notes?'<p class="small"><b>Observaciones:</b> '+escaparHTML(solicitud.review_notes)+'</p>':"")+
@@ -1297,14 +1331,23 @@ $("enviarVerificacionConductor").addEventListener("click",async()=>{
   const boton=$("enviarVerificacionConductor"),mensaje=$("mensajeVerificacionConductor");
   if(!usuarioActual){mensaje.textContent="Debes iniciar sesión con Google.";return;}
   if(!["driver","owner","owner_driver"].includes(rolUsuario)){mensaje.textContent="Esta cuenta no tiene un rol habilitado para verificación de conductor.";return;}
-  boton.disabled=true;boton.textContent="Enviando solicitud...";mensaje.textContent="Registrando tu solicitud...";
+  const cedula=$("cedulaConductor").value.trim().replace(/\s+/g,"");
+  const celular=$("celularConductor").value.trim().replace(/[\s()-]/g,"");
+  if(!/^[0-9A-Za-z.-]{5,20}$/.test(cedula)){mensaje.textContent="Escribe un número de cédula válido (5 a 20 caracteres).";return;}
+  if(!/^\+?[0-9]{10,15}$/.test(celular)){mensaje.textContent="Escribe un celular válido de 10 a 15 dígitos, con indicativo si corresponde.";return;}
+  boton.disabled=true;boton.textContent="Enviando solicitud...";mensaje.textContent="Guardando tus datos privados...";
   try{
+    const {error:errorDatos}=await supabaseClient.from("driver_verification_private_data").upsert({
+      user_id:usuarioActual.id,national_id:cedula,phone_whatsapp:celular,updated_at:new Date().toISOString()
+    },{onConflict:"user_id"});
+    if(errorDatos)throw new Error("No se pudieron guardar tus datos privados: "+errorDatos.message);
+    mensaje.textContent="Datos guardados. Registrando la solicitud...";
     const {error}=await supabaseClient.rpc("submit_driver_verification",{p_document_storage_path:null});
     if(error)throw new Error("No se pudo registrar la solicitud: "+error.message);
-    mensaje.textContent="¡Solicitud enviada! RUTA CARGA revisará los datos de tu perfil.";
+    mensaje.textContent="¡Solicitud enviada! El equipo de RUTA CARGA revisará tus datos.";
     await cargarSolicitudConductor(usuarioActual);
   }catch(error){mensaje.textContent=error.message||"Ocurrió un error al enviar la solicitud.";}
-  finally{boton.disabled=false;boton.textContent="Solicitar verificación";}
+  finally{boton.disabled=false;}
 });
 
 async function comprobarAdministrador(user){
