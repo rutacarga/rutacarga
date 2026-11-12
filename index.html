@@ -4,15 +4,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="theme-color" content="#123b66">
+<meta name="theme-color" content="#101010">
 <title>RUTA CARGA | La red nacional del hombre camión</title>
 <style>
 :root{
   color-scheme:light;
-  --navy:#123B66;
-  --blue:#1B568B;
-  --orange:#F58220;
-  --orange-dark:#B85A0A;
+  --navy:#101010;
+  --blue:#242424;
+  --orange:#D71920;
+  --orange-dark:#A30F17;
   --bg:#F4F7FA;
   --surface:#FFFFFF;
   --ink:#18324B;
@@ -20,7 +20,7 @@
   --line:#DCE5ED;
   --green:#13845B;
   --red:#B42318;
-  --shadow:0 10px 28px rgba(18,59,102,.07);
+  --shadow:0 10px 28px rgba(0,0,0,.07);
 }
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
@@ -38,9 +38,9 @@ header{
   overflow:hidden;
   padding:27px 20px 30px;
   color:#fff;
-  background:linear-gradient(112deg,#0D2B4B 0%,#123B66 62%,#1B568B 100%);
+  background:linear-gradient(112deg,#050505 0%,#101010 62%,#242424 100%);
   border-bottom:4px solid var(--orange);
-  box-shadow:0 12px 30px rgba(9,36,62,.14);
+  box-shadow:0 12px 30px rgba(0,0,0,.14);
 }
 header:before{
   content:"";
@@ -59,7 +59,7 @@ header:after{
   width:220px;height:220px;
   right:16%;bottom:-190px;
   border-radius:50%;
-  background:rgba(245,130,32,.2);
+  background:rgba(215,25,32,.2);
   filter:blur(12px);
 }
 .header{position:relative;max-width:1180px;margin:0 auto}
@@ -88,7 +88,7 @@ header:after{
 .brand-word span:last-child{color:var(--orange)}
 header p{
   margin:8px 0 0 3px;
-  color:#E5EDF5;
+  color:#E5E5E5;
   font-size:13px;
   font-weight:650;
   letter-spacing:.045em;
@@ -103,17 +103,17 @@ header p{
   min-height:340px;
   padding:38px 40px;
   color:#fff;
-  background:#102A43 url("https://assets.volvo.com/is/image/VolvoInformationTechnologyAB/volvo-fh-aero-aus?dpr=off&fit=constrain&qlt=82&ts=1745281542431&wid=1600") center 54%/cover no-repeat;
-  border:1px solid #244A70;
+  background:#101010 url("https://assets.volvo.com/is/image/VolvoInformationTechnologyAB/volvo-fh-aero-aus?dpr=off&fit=constrain&qlt=82&ts=1745281542431&wid=1600") center 54%/cover no-repeat;
+  border:1px solid #383838;
   border-radius:22px;
-  box-shadow:0 18px 42px rgba(18,59,102,.15);
+  box-shadow:0 18px 42px rgba(0,0,0,.15);
 }
 .brand-hero-inner:before{
   content:"";
   position:absolute;
   z-index:-1;
   inset:0;
-  background:linear-gradient(90deg,rgba(9,31,53,.95) 0%,rgba(18,59,102,.82) 38%,rgba(18,59,102,.2) 78%,rgba(18,59,102,.06) 100%);
+  background:linear-gradient(90deg,rgba(9,31,53,.95) 0%,rgba(0,0,0,.82) 38%,rgba(0,0,0,.2) 78%,rgba(0,0,0,.06) 100%);
 }
 .brand-hero-copy{position:relative;z-index:1;max-width:540px}
 .brand-hero h1{
@@ -125,7 +125,7 @@ header p{
   letter-spacing:-1.6px;
   text-shadow:0 2px 12px rgba(0,0,0,.3);
 }
-.brand-hero h1 em{color:#FF9B45;font-style:normal}
+.brand-hero h1 em{color:#FF424A;font-style:normal}
 .brand-hero p{
   max-width:440px;
   margin:0;
@@ -154,29 +154,29 @@ main{max-width:1180px;margin:0 auto;padding:26px 20px 42px}
   margin:0 0 16px;
   padding:4px 2px 12px;
   scrollbar-width:thin;
-  scrollbar-color:#C7D7E5 transparent;
+  scrollbar-color:#D5D5D5 transparent;
   -webkit-overflow-scrolling:touch;
 }
 .tab{
   flex:0 0 auto;
   min-height:44px;
   padding:11px 16px;
-  color:#476170;
+  color:#4A4A4A;
   font-weight:750;
   white-space:nowrap;
   cursor:pointer;
   background:#fff;
-  border:1px solid #D6E4E9;
+  border:1px solid #DDDDDD;
   border-radius:12px;
-  box-shadow:0 2px 8px rgba(14,48,66,.025);
+  box-shadow:0 2px 8px rgba(0,0,0,.025);
   transition:background .18s,border-color .18s,color .18s,transform .18s,box-shadow .18s;
 }
-.tab:hover{color:var(--orange-dark);border-color:#F5B477;transform:translateY(-1px)}
+.tab:hover{color:var(--orange-dark);border-color:#E6A0A3;transform:translateY(-1px)}
 .tab.active{
   color:#fff;
   background:linear-gradient(120deg,var(--navy),var(--blue));
   border-color:transparent;
-  box-shadow:0 7px 18px rgba(18,59,102,.2);
+  box-shadow:0 7px 18px rgba(0,0,0,.2);
 }
 .panel{
   margin-bottom:18px;
@@ -187,21 +187,21 @@ main{max-width:1180px;margin:0 auto;padding:26px 20px 42px}
   box-shadow:var(--shadow);
   transition:border-color .2s,box-shadow .2s;
 }
-.panel:hover{border-color:#EFC49D;box-shadow:0 13px 32px rgba(18,59,102,.09)}
+.panel:hover{border-color:#EFC49D;box-shadow:0 13px 32px rgba(0,0,0,.09)}
 h2{
   margin:0 0 13px;
-  color:#0F3152;
+  color:#171717;
   font-size:clamp(19px,2.4vw,23px);
   font-weight:850;
   letter-spacing:-.55px;
 }
-h3{color:#173A58;letter-spacing:-.3px}
+h3{color:#252525;letter-spacing:-.3px}
 .grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
 .formgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 label{
   display:block;
   margin-bottom:7px;
-  color:#58717F;
+  color:#666666;
   font-size:11px;
   font-weight:800;
   letter-spacing:.045em;
@@ -211,22 +211,22 @@ input,select,textarea{
   width:100%;
   min-height:46px;
   padding:12px 13px;
-  color:#173344;
+  color:#202020;
   background:#FBFDFE;
-  border:1px solid #D5E2E8;
+  border:1px solid #DDDDDD;
   border-radius:11px;
   font-size:14px;
   transition:border-color .18s,box-shadow .18s,background .18s;
 }
 textarea{min-height:88px;resize:vertical}
-input:hover,select:hover,textarea:hover{border-color:#A9C7D1}
+input:hover,select:hover,textarea:hover{border-color:#BDBDBD}
 input:focus,select:focus,textarea:focus{
   outline:0;
   background:#fff;
   border-color:var(--orange);
-  box-shadow:0 0 0 4px rgba(245,130,32,.14);
+  box-shadow:0 0 0 4px rgba(215,25,32,.14);
 }
-input:disabled,select:disabled,textarea:disabled{color:#718292;background:#F0F3F6;cursor:not-allowed}
+input:disabled,select:disabled,textarea:disabled{color:#777777;background:#F0F3F6;cursor:not-allowed}
 .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:13px}
 .btn{
   display:inline-flex;
@@ -240,21 +240,21 @@ input:disabled,select:disabled,textarea:disabled{color:#718292;background:#F0F3F
   text-align:center;
   text-decoration:none;
   cursor:pointer;
-  background:linear-gradient(120deg,#E96F12,var(--orange));
+  background:linear-gradient(120deg,#A90F17,var(--orange));
   border:1px solid transparent;
   border-radius:11px;
-  box-shadow:0 5px 13px rgba(218,105,15,.2);
+  box-shadow:0 5px 13px rgba(180,15,25,.2);
   transition:transform .18s,box-shadow .18s,filter .18s;
 }
-.btn:hover{transform:translateY(-2px);filter:saturate(1.08);box-shadow:0 8px 18px rgba(218,105,15,.27)}
+.btn:hover{transform:translateY(-2px);filter:saturate(1.08);box-shadow:0 8px 18px rgba(180,15,25,.27)}
 .btn:active{transform:translateY(0)}
 .btn.secondary{
   color:var(--navy);
-  background:#EDF3F8;
+  background:#F1F1F1;
   border-color:#D8E3ED;
   box-shadow:none;
 }
-.btn.secondary:hover{background:#E4EEF6;box-shadow:0 5px 13px rgba(18,59,102,.08)}
+.btn.secondary:hover{background:#E8E8E8;box-shadow:0 5px 13px rgba(0,0,0,.08)}
 .btn.success{background:linear-gradient(120deg,#087C61,#16A477);box-shadow:0 5px 13px rgba(18,132,91,.16)}
 .btn.danger{background:linear-gradient(120deg,#A92331,#CC4653);box-shadow:0 5px 13px rgba(180,35,24,.14)}
 .btn:disabled{opacity:.55;cursor:not-allowed;transform:none;box-shadow:none}
@@ -265,20 +265,20 @@ input:disabled,select:disabled,textarea:disabled{color:#718292;background:#F0F3F
   background:linear-gradient(160deg,#fff 0%,#FBFDFE 100%);
   border:1px solid #DCE8ED;
   border-radius:16px;
-  box-shadow:0 5px 18px rgba(14,48,66,.045);
+  box-shadow:0 5px 18px rgba(0,0,0,.045);
   transition:transform .18s,box-shadow .18s,border-color .18s;
 }
-.load:hover,.request:hover{transform:translateY(-2px);border-color:#EFC49D;box-shadow:0 12px 26px rgba(18,59,102,.085)}
-.route{color:#102F42;font-size:19px;font-weight:850;letter-spacing:-.45px;overflow-wrap:anywhere}
+.load:hover,.request:hover{transform:translateY(-2px);border-color:#EFC49D;box-shadow:0 12px 26px rgba(0,0,0,.085)}
+.route{color:#171717;font-size:19px;font-weight:850;letter-spacing:-.45px;overflow-wrap:anywhere}
 .route span{color:var(--orange)}
 .meta{display:flex;gap:7px;flex-wrap:wrap;margin:10px 0}
 .chip{
   padding:6px 10px;
-  color:#98500F;
+  color:#A30F17;
   font-size:11px;
   font-weight:750;
-  background:#FFF3E8;
-  border:1px solid #F7DFC8;
+  background:#FFF0F0;
+  border:1px solid #F0D0D2;
   border-radius:20px;
 }
 .price{margin:8px 0;color:#087C61;font-size:24px;font-weight:900;letter-spacing:-.6px}
@@ -288,20 +288,20 @@ input:disabled,select:disabled,textarea:disabled{color:#718292;background:#F0F3F
 .stat{
   min-width:0;
   padding:16px;
-  color:#5D7582;
+  color:#666666;
   font-size:12px;
   font-weight:700;
-  background:linear-gradient(145deg,#F2F8FA,#EAF3F6);
-  border:1px solid #DEEAEE;
+  background:linear-gradient(145deg,#F5F5F5,#EEEEEE);
+  border:1px solid #E2E2E2;
   border-radius:14px;
 }
-.stat b{display:block;margin-top:5px;color:#103449;font-size:23px;letter-spacing:-.6px;overflow-wrap:anywhere}
+.stat b{display:block;margin-top:5px;color:#171717;font-size:23px;letter-spacing:-.6px;overflow-wrap:anywhere}
 .empty{
   padding:28px;
   color:var(--muted);
   text-align:center;
   background:#F8FBFC;
-  border:1px dashed #CBDDE4;
+  border:1px dashed #D5D5D5;
   border-radius:14px;
 }
 .status{
@@ -317,7 +317,7 @@ input:disabled,select:disabled,textarea:disabled{color:#718292;background:#F0F3F
 }
 .status.verified{color:#08764F;background:#DFF8EC}
 .status.rejected,.status.suspended{color:#A21B14;background:#FEE4E2}
-footer{padding:25px;color:#78909B;font-size:12px;text-align:center}
+footer{padding:25px;color:#777777;font-size:12px;text-align:center}
 .modal{
   display:none;
   position:fixed;
@@ -341,17 +341,17 @@ footer{padding:25px;color:#78909B;font-size:12px;text-align:center}
   box-shadow:0 25px 80px rgba(3,24,38,.25);
 }
 #acceso{
-  background:linear-gradient(120deg,#fff,#F8FBFF);
+  background:linear-gradient(120deg,#fff,#FAFAFA);
   border-color:#D8E3ED;
 }
 #panelSeleccionRol{
-  background:linear-gradient(130deg,#FFF7EF,#fff 62%,#F4F8FC);
-  border-color:#F1D1B2;
+  background:linear-gradient(130deg,#FFF0F0,#fff 62%,#F5F5F5);
+  border-color:#E8B8BA;
 }
-#panelRegistroEmpresa{background:linear-gradient(145deg,#fff,#FCFDFF)}
+#panelRegistroEmpresa{background:linear-gradient(145deg,#fff,#FCFCFC)}
 .role-options .btn{min-height:48px}
 details summary{color:var(--navy);font-weight:750;cursor:pointer}
-:focus-visible{outline:3px solid rgba(245,130,32,.55);outline-offset:3px}
+:focus-visible{outline:3px solid rgba(215,25,32,.55);outline-offset:3px}
 @media(min-width:900px){
   main{padding-top:30px}
   #buscar>.panel:first-child{padding:25px}
@@ -366,7 +366,7 @@ details summary{color:var(--navy);font-weight:750;cursor:pointer}
   header p{font-size:12px}
   .brand-hero{margin-top:14px;padding:0 12px}
   .brand-hero-inner{min-height:285px;padding:25px 21px;background-position:58% center}
-  .brand-hero-inner:before{background:linear-gradient(90deg,rgba(9,31,53,.94),rgba(18,59,102,.68) 62%,rgba(18,59,102,.25))}
+  .brand-hero-inner:before{background:linear-gradient(90deg,rgba(9,31,53,.94),rgba(0,0,0,.68) 62%,rgba(0,0,0,.25))}
   .brand-hero-copy{max-width:100%}
   .brand-hero h1{font-size:clamp(29px,7vw,36px)}
   .brand-hero p{font-size:14px}
@@ -434,6 +434,27 @@ input:focus,select:focus,textarea:focus{border-color:#D71920;box-shadow:0 0 0 4p
 @media(max-width:700px){
   .brand-hero-inner:before{background:linear-gradient(90deg,rgba(0,0,0,.95),rgba(22,22,22,.76) 62%,rgba(30,10,11,.3))}
 }
+
+
+/* Ajuste integral de identidad RUTA CARGA: rojo + negro */
+:root{color-scheme:light;--navy:#101010;--blue:#242424;--orange:#D71920;--orange-dark:#A30F17;--bg:#F5F5F5;--surface:#fff;--ink:#171717;--muted:#666;--line:#E3E3E3}
+body{background:linear-gradient(180deg,#fff 0%,#F5F5F5 100%);color:#171717}
+header{background:linear-gradient(112deg,#050505 0%,#171717 68%,#292929 100%);border-bottom:4px solid #D71920}
+header:after{background:rgba(215,25,32,.24)}
+.brand-word span:last-child,.brand-hero h1 em,.route span{color:#D71920}
+.brand-hero-inner{border-color:#383838}
+.brand-hero-inner:before{background:linear-gradient(90deg,rgba(0,0,0,.96) 0%,rgba(18,18,18,.88) 43%,rgba(30,10,11,.32) 100%)}
+.tab.active{background:linear-gradient(120deg,#080808,#292929);border-color:#D71920}
+.btn{background:linear-gradient(120deg,#A90F17,#E21B25);box-shadow:0 5px 13px rgba(180,15,25,.2)}
+.btn:hover{box-shadow:0 8px 18px rgba(180,15,25,.27)}
+.btn.secondary{color:#171717;background:#F1F1F1;border-color:#D8D8D8}
+.btn.secondary:hover{background:#E8E8E8}
+input:focus,select:focus,textarea:focus{border-color:#D71920;box-shadow:0 0 0 4px rgba(215,25,32,.13)}
+.tab:hover{color:#A30F17;border-color:#E6A0A3}
+.panel:hover,.load:hover,.request:hover{border-color:#E3A3A6}
+#panelSeleccionRol{background:linear-gradient(130deg,#FFF2F2,#fff 62%,#F5F5F5);border-color:#E8B8BA}
+#panelRegistroEmpresa{background:linear-gradient(145deg,#fff,#FCFCFC)}
+:focus-visible{outline-color:rgba(215,25,32,.58)}
 
 </style>
 </head>
