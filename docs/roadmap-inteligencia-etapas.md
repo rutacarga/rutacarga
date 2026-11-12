@@ -154,3 +154,13 @@ Preparar la arquitectura y la primera versión determinista de emparejamiento en
 - Pruebas de base de datos en transacciones revertidas: dos avisos de prueba para dos perfiles; un usuario autenticado solo pudo marcar como leída su propia fila (1 de 2). Prueba temporal de solicitud realista: el trigger creó el aviso para la empresa y, al cambiar a `contacted` como empresa propietaria verificada, creó el aviso para el transportador. Todo se revirtió; no quedaron datos de prueba.
 - Frontend: el script JavaScript inline pasó comprobación sintáctica. No hay duplicados nuevos de IDs estáticos (el detector solo señaló una plantilla HTML dinámica preexistente). Aún falta prueba visual/interactiva con sesiones reales de conductor y empresa en navegador.
 - El preview de Vercel se genera desde la rama; no se ha promovido a producción.
+
+
+## Avance — perfil privado de confianza y servicios complementarios (2026-11-12 UTC)
+- En la rama de preview se añadió **Mi perfil de confianza** dentro del perfil de cuenta. Muestra únicamente señales internas ya existentes: estado de verificación disponible según el rol y número de vehículos registrados.
+- No calcula reputación, estrellas, puntajes, rankings ni historial público; no expone nombres, placas, teléfonos, documentos, NIT ni datos de terceros. El resumen está dentro del área autenticada de la cuenta.
+- Se añadió la pestaña **Servicios complementarios** con categorías previstas (talleres, llantas/repuestos, grúas, parqueaderos, combustible y seguros), pero en estado informativo: no lista proveedores ni recomienda comercios todavía.
+- El directorio permanecerá sin proveedores hasta definir criterios de validación, moderación, consentimiento y procedimiento para retirar o reportar un proveedor. No se habilitan pagos, reservas ni intercambio de datos con terceros.
+- No se modificó el esquema de Supabase ni se cargaron datos comerciales. La UI se basa en información existente y muestra claramente que el directorio está en preparación.
+- JavaScript inline validado sintácticamente tras los cambios. El detector de IDs solo señaló una plantilla dinámica preexistente; no se identificaron duplicados estáticos nuevos.
+- La rama continúa aislada de producción. Falta prueba visual/interactiva con sesiones reales y revisión de contenido/privacidad antes de publicar.
