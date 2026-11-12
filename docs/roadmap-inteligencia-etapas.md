@@ -180,3 +180,11 @@ Preparar la arquitectura y la primera versión determinista de emparejamiento en
 - No crea solicitudes de interés, no contacta empresas, no reserva cargas, no altera datos ni envía avisos externos. Es un panel calculado al abrir/actualizar, no una notificación push ni una promesa de compatibilidad técnica o legal.
 - No se cambió el esquema ni se escribieron datos en Supabase. El umbral y ponderaciones son orientativos; deben validarse con operaciones reales antes de convertirlos en reglas comerciales.
 - JavaScript inline comprobado sintácticamente y IDs estáticos sin duplicados. Falta prueba E2E con sesiones reales y validación de los resultados con conductores y empresas.
+
+
+## Avance — panel empresarial y administrador IA de solo lectura (2026-11-12 UTC)
+- El panel empresarial ahora genera recomendaciones deterministas con base en cargas publicadas, solicitudes recibidas, pendientes y tasa de contacto. Sugiere completar/activar publicaciones y dar seguimiento; no cambia estados ni contacta usuarios.
+- El resumen administrativo incorpora usuarios, empresas verificadas, conductores verificados, vehículos, solicitudes totales y tasa global de contacto, junto con reglas operativas de lectura.
+- La etiqueta Administrador IA se presenta con transparencia: esta versión es análisis basado en reglas, no IA generativa ni agente con permisos de acción.
+- Sin migraciones ni escrituras nuevas en Supabase. Las consultas usan los permisos RLS existentes y datos ya visibles al rol correspondiente.
+- JavaScript inline validado sintácticamente e IDs estáticos sin duplicados. No se ha ejecutado E2E con sesión real de empresa ni administrador; las métricas dependen de los registros visibles y deben validarse en preview.
