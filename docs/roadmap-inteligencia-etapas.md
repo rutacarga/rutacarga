@@ -133,3 +133,14 @@ Riesgo: alto por alucinaciones y exposición de datos; limitar herramientas, reg
 
 ## Primer trabajo autorizado
 Preparar la arquitectura y la primera versión determinista de emparejamiento en una rama de trabajo/preview, sin modificar datos productivos ni activar notificaciones externas. La lógica debe ser explicable y reversible; el despliegue productivo queda separado.
+
+
+## Avance adicional — cimientos de alertas internas (2026-11-12 UTC)
+- Se creó `public.user_notifications` con destinatario, tipo de evento, título/mensaje breve, referencia a la solicitud, fecha de creación y fecha de lectura.
+- RLS está activo. Un usuario autenticado solo puede consultar sus propias notificaciones y actualizar únicamente `read_at`; no puede insertar, borrar ni modificar el contenido. `anon` no tiene acceso.
+- Los triggers internos generan una notificación a la empresa cuando recibe una solicitud de interés y al transportador cuando la empresa cambia el estado a `contacted` o `closed`.
+- La función de trigger vive en el esquema `private`, es `SECURITY DEFINER` con `search_path` vacío y no es ejecutable directamente por `anon` ni por `authenticated`.
+- Se añadieron índices para destinatario/fecha y para la clave foránea de solicitud.
+- Verificación posterior: RLS habilitado; permisos comprobados (sin INSERT para authenticated, sin acceso anon, UPDATE limitado a `read_at`); dos triggers presentes; función privada sin EXECUTE público; asesor de rendimiento ya no reporta FK sin índice.
+- **Todavía no hay bandeja visible en el frontend.** La tabla no se ha añadido a los esquemas expuestos del Data API ni se ha conectado al cliente; falta revisar la configuración de exposición, implementar UI y probar con cuentas de prueba. Por tanto, las alertas están preparadas a nivel de base de datos, pero no se presentan todavía a los usuarios.
+- No se enviaron correos, WhatsApp ni mensajes externos, no se modificaron solicitudes reales y no se tocó producción del frontend.
