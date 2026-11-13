@@ -1199,6 +1199,8 @@ async function cargarSolicitudConductor(user){
   }
   $("cedulaConductor").value=datos?.national_id||$("cedulaPerfil").value||"";
   $("celularConductor").value=datos?.phone_whatsapp||$("whatsappPerfil").value||"";
+  if(datos?.national_id&&!$("cedulaPerfil").value)$("cedulaPerfil").value=datos.national_id;
+  if(datos?.phone_whatsapp&&!$("whatsappPerfil").value)$("whatsappPerfil").value=datos.phone_whatsapp;
 
   if(!data){
     conductorVerificado=false;
@@ -1957,33 +1959,42 @@ async function cargarUsuariosAdmin(){
     .order("created_at",{ascending:false});
   if(error){mensaje.textContent="No se pudo consultar el directorio: "+error.message;return;}
   const ids=(perfiles||[]).map(x=>x.id);
-  let vehiculos=[],empresas=[];
+  let vehiculos=[],empresas=[],contactos=[],identidades=[];
   if(ids.length){
-    const [{data:datosVehiculos,error:errorVehiculos},{data:datosEmpresas,error:errorEmpresas}]=await Promise.all([
+    const [{data:datosVehiculos,error:errorVehiculos},{data:datosEmpresas,error:errorEmpresas},{data:datosContactos,error:errorContactos},{data:datosIdentidades,error:errorIdentidades}]=await Promise.all([
       supabaseClient.from("vehicles").select("owner_id,plate,configuration,body_type,city,availability").in("owner_id",ids),
-      supabaseClient.from("company_verifications").select("user_id,legal_name,nit,status").in("user_id",ids)
+      supabaseClient.from("company_verifications").select("user_id,legal_name,nit,status").in("user_id",ids),
+      supabaseClient.from("company_public_contacts").select("company_id,whatsapp").in("company_id",ids),
+      supabaseClient.from("driver_verification_private_data").select("user_id,national_id,phone_whatsapp").in("user_id",ids)
     ]);
     if(errorVehiculos){mensaje.textContent="Usuarios consultados; no se pudieron consultar los vehículos: "+errorVehiculos.message;return;}
     if(errorEmpresas){mensaje.textContent="Usuarios consultados; no se pudieron consultar los NIT: "+errorEmpresas.message;return;}
+    if(errorContactos){mensaje.textContent="Usuarios consultados; no se pudieron consultar los contactos empresariales: "+errorContactos.message;return;}
+    if(errorIdentidades){mensaje.textContent="Usuarios consultados; no se pudieron consultar las identificaciones privadas: "+errorIdentidades.message;return;}
     vehiculos=datosVehiculos||[];
     empresas=datosEmpresas||[];
+    contactos=datosContactos||[];
+    identidades=datosIdentidades||[];
   }
   const mapa=new Map(vehiculos.map(v=>[v.owner_id,v]));
   const mapaEmpresas=new Map(empresas.map(e=>[e.user_id,e]));
+  const mapaContactos=new Map(contactos.map(x=>[x.company_id,x.whatsapp]));
+  const mapaIdentidades=new Map(identidades.map(x=>[x.user_id,x]));
   const roles={admin:"Administrador",company:"Empresa de transporte",driver:"Conductor",owner:"Propietario",owner_driver:"Propietario y conductor"};
   const estados={verified:"Verificado",pending:"Pendiente",rejected:"Rechazado",suspended:"Suspendido",not_submitted:"Sin enviar"};
   mensaje.textContent="Usuarios registrados: "+(perfiles||[]).length;
   if(!perfiles?.length){lista.innerHTML='<div class="empty">No hay usuarios registrados.</div>';return;}
   perfiles.forEach(p=>{
-    const v=mapa.get(p.id),empresa=mapaEmpresas.get(p.id),card=document.createElement("article");card.className="request";
+    const v=mapa.get(p.id),empresa=mapaEmpresas.get(p.id),privado=mapaIdentidades.get(p.id),card=document.createElement("article");card.className="request";
     const identificacion=p.role==="company"
       ?'<p class="small"><b>Razón social:</b> '+escaparHTML(empresa?.legal_name||"No registrada")+' · <b>NIT:</b> '+escaparHTML(empresa?.nit||"No registrado")+'</p>'
-      :'<p class="small"><b>Cédula:</b> '+escaparHTML(p.national_id||"No registrada")+'</p>';
+      :'<p class="small"><b>Cédula:</b> '+escaparHTML(p.national_id||privado?.national_id||"No registrada")+'</p>';
+    const whatsapp=p.phone_whatsapp||mapaContactos.get(p.id)||privado?.phone_whatsapp||"No registrado";
     card.innerHTML='<h3>'+escaparHTML(p.full_name||"Usuario sin nombre")+'</h3>'+
       '<p class="small"><b>Rol:</b> '+escaparHTML(roles[p.role]||p.role)+'</p>'+
       '<p class="small"><b>Verificación:</b> '+escaparHTML(estados[p.verification_status]||p.verification_status)+'</p>'+
       identificacion+
-      '<p class="small"><b>Ciudad:</b> '+escaparHTML(p.city||"No indicada")+' · <b>WhatsApp:</b> '+escaparHTML(p.phone_whatsapp||"No registrado")+'</p>'+
+      '<p class="small"><b>Ciudad:</b> '+escaparHTML(p.city||"No indicada")+' · <b>WhatsApp:</b> '+escaparHTML(whatsapp)+'</p>'+
       (v?'<p class="small"><b>Vehículo:</b> '+escaparHTML(v.plate)+' · '+escaparHTML(v.configuration)+' · '+escaparHTML(v.body_type)+' · '+escaparHTML(v.city||"")+'</p>':'<p class="small">Sin vehículo registrado.</p>')+
       '<p class="small">Registro: '+escaparHTML(new Date(p.created_at).toLocaleString("es-CO"))+'</p>';
     lista.appendChild(card);
@@ -2346,8 +2357,8 @@ $("guardarPerfil").onclick=async()=>{
   const esPersonaNatural=rolUsuario!=="company";
   const placa=$("placa").value.trim().toUpperCase();
 
-  if(!nombre||!ciudad||!whatsapp){
-    mensaje.textContent="Completa tu nombre, ciudad y WhatsApp para guardar el perfil.";
+  if(!nombre||!ciudad){
+    mensaje.textContent="Completa tu nombre y ciudad para guardar el perfil.";
     return;
   }
   if(!whatsapp){
@@ -2589,6 +2600,7 @@ async function cargarContactoEmpresa(user){
     return;
   }
   if(data){
+    if(data.whatsapp&&!$("whatsappPerfil").value)$("whatsappPerfil").value=data.whatsapp;
     autorizacion.checked=puedePublicar&&!!data.publicly_visible;
     mensaje.textContent=puedePublicar
       ?(data.publicly_visible?"Contacto guardado y autorizado para mostrarse en cargas reales.":"Contacto guardado de forma privada. Activa la autorización para publicarlo.")
