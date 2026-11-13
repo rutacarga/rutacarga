@@ -2355,7 +2355,7 @@ $("guardarPerfil").onclick=async()=>{
   const nombre=$("conductor").value.trim();
   const ciudad=$("ciudad").value.trim();
   const whatsapp=normalizarWhatsApp($("whatsappPerfil").value);
-  const cedula=$("cedulaPerfil").value.trim().replace(/\\s+/g,"");
+  const cedula=$("cedulaPerfil").value.trim().replace(/\s+/g,"");
   const esPersonaNatural=rolUsuario!=="company";
   const placa=$("placa").value.trim().toUpperCase();
 
