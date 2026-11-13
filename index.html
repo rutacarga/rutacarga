@@ -615,10 +615,14 @@ input:focus,select:focus,textarea:focus{border-color:#075BFF;box-shadow:0 0 0 4p
 <section id="verificacionConductor" class="view hidden">
 <div class="panel">
 <h2>Verificación de conductor</h2>
-<p class="small">Solicita tu verificación con los datos básicos de tu cuenta. No necesitas adjuntar archivos ni fotografías.</p>
+<p class="small">Completa tus datos de identificación y contacto. Esta información será visible únicamente para tu cuenta y los administradores autorizados que revisan la solicitud.</p>
 <div id="estadoVerificacionConductor" aria-live="polite" class="small">Consultando tu estado de verificación...</div>
 <div id="formularioVerificacionConductor">
-<div class="notice" style="margin-top:14px">RUTA CARGA revisará tu solicitud con los datos de tu perfil. No necesitas adjuntar archivos.</div>
+<div class="notice" style="margin-top:14px">Tus datos de identificación se almacenan de forma privada y se utilizan para validar la solicitud.</div>
+<div class="formgrid">
+<div><label for="cedulaConductor">Cédula / documento *</label><input id="cedulaConductor" maxlength="20" autocomplete="off" inputmode="text" placeholder="Número de documento"></div>
+<div><label for="whatsappConductor">Celular / WhatsApp *</label><input id="whatsappConductor" type="tel" maxlength="20" autocomplete="tel" inputmode="tel" placeholder="Ej. 3001234567"></div>
+</div>
 <button class="btn" id="enviarVerificacionConductor" type="button">Solicitar verificación</button>
 <p class="small" id="mensajeVerificacionConductor" aria-live="polite"></p>
 </div>
@@ -1018,6 +1022,15 @@ async function cargarSolicitudConductor(user){
   boton.textContent="Solicitar verificación";
   mensaje.textContent="";
 
+  const {data:datosPrivados,error:errorDatosPrivados}=await supabaseClient
+    .from("driver_verification_private_data")
+    .select("national_id,phone_whatsapp")
+    .eq("user_id",user.id)
+    .maybeSingle();
+  if(errorDatosPrivados){mensaje.textContent="No se pudieron consultar tus datos privados: "+errorDatosPrivados.message;return;}
+  $("cedulaConductor").value=datosPrivados?.national_id||"";
+  $("whatsappConductor").value=datosPrivados?.phone_whatsapp||"";
+
   const {data,error}=await supabaseClient
     .from("driver_verifications")
     .select("status,submitted_at,review_notes,reviewed_at")
@@ -1096,17 +1109,33 @@ async function cargarSolicitudesConductoresAdmin(){
     return;
   }
 
+  const ids=[...new Set(data.map(s=>s.user_id))];
+  const [{data:perfiles,error:errorPerfiles},{data:datosPrivados,error:errorDatosPrivados}]=await Promise.all([
+    supabaseClient.from("profiles").select("id,full_name,phone_whatsapp,city").in("id",ids),
+    supabaseClient.from("driver_verification_private_data").select("user_id,national_id,phone_whatsapp").in("user_id",ids)
+  ]);
+  if(errorPerfiles||errorDatosPrivados){
+    mensaje.textContent="Solicitudes encontradas, pero no se pudieron cargar los datos de identidad: "+(errorPerfiles?.message||errorDatosPrivados?.message);
+    return;
+  }
+  const perfilesPorId=new Map((perfiles||[]).map(p=>[p.id,p]));
+  const datosPorId=new Map((datosPrivados||[]).map(p=>[p.user_id,p]));
   mensaje.textContent="Solicitudes encontradas: "+data.length;
   const estados={pending:"Pendiente de revisión",verified:"Aprobado",rejected:"Rechazado",suspended:"Suspendido",not_submitted:"No enviada"};
 
   for(const solicitud of data){
     const tarjeta=document.createElement("article");
     tarjeta.className="request";
+    const perfil=perfilesPorId.get(solicitud.user_id)||{};
+    const privado=datosPorId.get(solicitud.user_id)||{};
     const fecha=solicitud.submitted_at?new Date(solicitud.submitted_at).toLocaleString("es-CO"):"No disponible";
     tarjeta.innerHTML=
       '<span class="status '+escaparHTML(solicitud.status)+'">'+escaparHTML(estados[solicitud.status]||solicitud.status)+'</span>'+
       '<h3>Solicitud de conductor</h3>'+
-      '<p class="small"><b>Usuario:</b> '+escaparHTML(solicitud.user_id)+'</p>'+
+      '<p class="small"><b>Nombre:</b> '+escaparHTML(perfil.full_name||"No registrado")+"</p>"+
+      '<p class="small"><b>Cédula:</b> '+escaparHTML(privado.national_id||"No registrada")+"</p>"+
+      '<p class="small"><b>Celular / WhatsApp:</b> '+escaparHTML(privado.phone_whatsapp||perfil.phone_whatsapp||"No registrado")+"</p>"+
+      '<p class="small"><b>Ciudad:</b> '+escaparHTML(perfil.city||"No indicada")+"</p>"+
       '<p class="small"><b>Fecha de envío:</b> '+escaparHTML(fecha)+'</p>'+
       (solicitud.review_notes?'<p class="small"><b>Observaciones:</b> '+escaparHTML(solicitud.review_notes)+'</p>':"")+
       (solicitud.status==="pending"?
@@ -1164,7 +1193,15 @@ $("enviarVerificacionConductor").addEventListener("click",async()=>{
   if(!usuarioActual){mensaje.textContent="Debes iniciar sesión con Google.";return;}
   if(!["driver","owner","owner_driver"].includes(rolUsuario)){mensaje.textContent="Esta cuenta no tiene un rol habilitado para verificación de conductor.";return;}
   boton.disabled=true;boton.textContent="Enviando solicitud...";mensaje.textContent="Registrando tu solicitud...";
+  const documento=$("cedulaConductor").value.trim();
+  const telefono=normalizarWhatsApp($("whatsappConductor").value);
+  if(!/^[0-9A-Za-z.-]{5,20}$/.test(documento)){mensaje.textContent="Escribe un número de documento válido (5 a 20 caracteres).";boton.disabled=false;return;}
+  if(!telefono){mensaje.textContent="Escribe un WhatsApp válido de 10 a 15 dígitos.";boton.disabled=false;return;}
   try{
+    const {error:errorDatos}=await supabaseClient.from("driver_verification_private_data").upsert({
+      user_id:usuarioActual.id,national_id:documento,phone_whatsapp:telefono,updated_at:new Date().toISOString()
+    },{onConflict:"user_id"});
+    if(errorDatos)throw new Error("No se pudieron guardar tus datos privados: "+errorDatos.message);
     const {error}=await supabaseClient.rpc("submit_driver_verification",{p_document_storage_path:null});
     if(error)throw new Error("No se pudo registrar la solicitud: "+error.message);
     mensaje.textContent="¡Solicitud enviada! RUTA CARGA revisará los datos de tu perfil.";
