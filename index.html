@@ -486,6 +486,156 @@ input:focus,select:focus,textarea:focus{border-color:#075BFF;box-shadow:0 0 0 4p
 #panelRegistroEmpresa{background:linear-gradient(145deg,#fff,#F4F8FF)}
 :focus-visible{outline-color:rgba(7,91,255,.62)}
 
+/* RUTA CARGA 2026 — sistema visual unificado */
+:root{
+  color-scheme:light;
+  --navy:#073B9A;
+  --blue:#075BFF;
+  --orange:#FF7A00;
+  --orange-dark:#E96500;
+  --bg:#F3F7FF;
+  --surface:#FFFFFF;
+  --ink:#10213A;
+  --muted:#5D6B82;
+  --line:#DCE6F5;
+  --shadow:0 12px 32px rgba(16,52,112,.075);
+}
+body{
+  background:radial-gradient(ellipse at 90% 0%,rgba(7,91,255,.055),transparent 34%),linear-gradient(180deg,#fff 0%,#F3F7FF 100%);
+  color:var(--ink);
+}
+header{
+  background:linear-gradient(118deg,#062D78 0%,#075BFF 64%,#3980FF 100%);
+  border-bottom:4px solid var(--orange);
+  box-shadow:0 14px 34px rgba(7,55,145,.18);
+}
+header:after{background:rgba(255,122,0,.28)}
+.brand-mark{filter:drop-shadow(0 4px 10px rgba(0,20,70,.28))}
+.brand-word span:last-child{color:#FFB15C}
+header p{color:#EAF1FF}
+.brand-hero-inner{
+  border:1px solid rgba(7,91,255,.2);
+  border-radius:24px;
+  box-shadow:0 20px 48px rgba(7,55,145,.16);
+}
+.brand-hero-inner:before{
+  background:linear-gradient(90deg,rgba(4,42,112,.97) 0%,rgba(7,75,190,.86) 46%,rgba(7,91,255,.24) 100%);
+}
+.brand-hero h1 em{color:#FFB15C}
+.brand-hero p{color:#F5F8FF}
+.tabs{scrollbar-color:#9DBBFA transparent}
+.tab{
+  color:#24436F;
+  background:#fff;
+  border:1px solid #D8E5FA;
+  border-radius:13px;
+  box-shadow:0 3px 10px rgba(7,55,145,.045);
+}
+.tab:hover{color:#075BFF;border-color:#FFB36B}
+.tab.active{
+  color:#fff;
+  background:linear-gradient(120deg,#0646C9,#075BFF);
+  border-color:#FF8A1D;
+  box-shadow:0 8px 20px rgba(7,91,255,.2);
+}
+.panel{
+  background:rgba(255,255,255,.98);
+  border:1px solid #DFE9F8;
+  border-radius:20px;
+  box-shadow:var(--shadow);
+}
+.panel:hover,.load:hover,.request:hover{
+  border-color:#9BBEFF;
+  box-shadow:0 14px 30px rgba(7,55,145,.10);
+}
+h2,h3{color:#12366E}
+.notice{
+  color:#70420C;
+  background:#FFF7EC;
+  border-color:#FFE0BB;
+  border-left-color:var(--orange);
+  border-radius:14px;
+}
+label{color:#23436F}
+input,select,textarea{
+  color:#10213A;
+  background:#FBFDFF;
+  border:1px solid #D5E1F2;
+  border-radius:12px;
+}
+input:hover,select:hover,textarea:hover{border-color:#91B3F5}
+input:focus,select:focus,textarea:focus{
+  border-color:#075BFF;
+  box-shadow:0 0 0 4px rgba(7,91,255,.13);
+}
+.btn{
+  color:#fff;
+  background:linear-gradient(120deg,#F06A00,#FF8A00);
+  border-radius:12px;
+  box-shadow:0 6px 15px rgba(255,122,0,.22);
+}
+.btn:hover{
+  background:linear-gradient(120deg,#E96500,#FF9A22);
+  box-shadow:0 9px 20px rgba(255,122,0,.29);
+}
+.btn.secondary{
+  color:#075BFF;
+  background:#F2F7FF;
+  border-color:#C8DAFF;
+  box-shadow:none;
+}
+.btn.secondary:hover{background:#E8F0FF}
+.btn.success{background:linear-gradient(120deg,#087C61,#16A477)}
+.btn.danger{background:linear-gradient(120deg,#A92331,#CC4653)}
+.load,.request{
+  background:linear-gradient(160deg,#fff 0%,#F9FBFF 100%);
+  border:1px solid #DCE7F7;
+  border-radius:17px;
+}
+.route{color:#12366E}
+.route span{color:#075BFF}
+.chip{
+  color:#0750D6;
+  background:#EDF4FF;
+  border-color:#CFE0FF;
+}
+.price{color:#087C61}
+.stat{
+  color:#49617F;
+  background:linear-gradient(145deg,#F3F7FF,#EAF1FF);
+  border-color:#DCE7F7;
+}
+.stat b{color:#075BFF}
+.empty{
+  color:#5D6B82;
+  background:#F8FAFF;
+  border-color:#C9D9F4;
+}
+.status{border:1px solid #F5D89C}
+.status.verified{border-color:#B8EBD3}
+.status.rejected,.status.suspended{border-color:#F4C3C0}
+.modal{background:rgba(4,24,62,.72)}
+.modalbox{
+  border:1px solid #DCE7F7;
+  border-radius:22px;
+  box-shadow:0 28px 90px rgba(3,28,78,.28);
+}
+#acceso{background:linear-gradient(120deg,#fff,#F3F7FF);border-color:#D8E5FA}
+#panelSeleccionRol{background:linear-gradient(130deg,#EDF4FF,#fff 62%,#FFF4E8);border-color:#C9DAFF}
+#panelRegistroEmpresa{background:linear-gradient(145deg,#fff,#F4F8FF)}
+details summary{color:#075BFF}
+:focus-visible{outline:3px solid rgba(7,91,255,.62);outline-offset:3px}
+@media(max-width:700px){
+  header{padding:23px 16px 26px}
+  .brand-hero-inner{border-radius:19px}
+  .panel{border-radius:17px}
+  .tabs{padding-bottom:13px}
+  .tab{min-height:46px}
+}
+@media(prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+}
+
 </style>
 </head>
 <body>
