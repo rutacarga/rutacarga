@@ -754,7 +754,8 @@ details summary{color:#075BFF}
 <div><label>Placa del remolque (si aplica)</label><input id="placaRemolque" placeholder="ABC123" maxlength="6"></div>
 <div><label>Configuración</label><select id="config"><option>2S1</option><option>2S2</option><option>3S2</option><option>3S3</option><option>Otra</option></select></div>
 <div><label>Carrocería</label><select id="carroceria"><option>Estacas</option><option>Furgón</option><option>Planchón</option><option>Portacontenedor</option><option>Volco</option><option>Tanque</option><option>Refrigerada</option></select></div>
-<div><label>Ciudad habitual</label><input id="ciudad" maxlength="80" autocomplete="address-level2" placeholder="Ciudad o municipio"></div>
+<div><label>Ciudad habitual *</label><input id="ciudad" maxlength="80" autocomplete="address-level2" placeholder="Ciudad o municipio"></div>
+<div><label>Celular / WhatsApp *</label><input id="whatsappPerfil" type="tel" maxlength="20" autocomplete="tel" inputmode="tel" placeholder="Ej. 3001234567"></div>
 <div><label>Tipo de cuenta</label><input value="Asignado por RUTA CARGA" disabled></div>
 </div>
 <button class="btn" id="guardarPerfil">Guardar perfil</button>
@@ -897,7 +898,7 @@ details summary{color:#075BFF}
 </div>
 <div class="panel">
 <h2>Aprobación de propietarios y vehículos</h2>
-<p class="small">Revisa el nombre, identificación, teléfono y datos del vehículo registrado. La aprobación habilita al propietario en RUTA CARGA.</p>
+<p class="small">Revisa el nombre, ciudad, WhatsApp y datos del vehículo. No solicitamos documentos ni archivos. La aprobación habilita al propietario en RUTA CARGA.</p>
 <div class="actions"><button class="btn secondary" id="actualizarPropietariosAdmin" type="button">Actualizar propietarios</button><select id="filtroPropietariosAdmin" style="max-width:220px"><option value="pending">Pendientes de aprobación</option><option value="verified">Aprobados</option><option value="rejected">Rechazados</option><option value="all">Todos</option></select></div>
 <p class="small" id="mensajePropietariosAdmin" aria-live="polite">Consultando propietarios...</p>
 <div class="cards" id="listaPropietariosAdmin"></div>
@@ -1049,7 +1050,7 @@ async function cargarPerfilDesdeSupabase(user){
   mensaje.textContent="Consultando tus datos guardados...";
 
   const {data:perfil,error:errorPerfil}=await supabaseClient
-    .from("profiles").select("full_name,city").eq("id",user.id).maybeSingle();
+    .from("profiles").select("full_name,city,phone_whatsapp").eq("id",user.id).maybeSingle();
 
   if(errorPerfil){
     mensaje.textContent="No se pudo consultar tu perfil: "+errorPerfil.message;
@@ -1059,6 +1060,7 @@ async function cargarPerfilDesdeSupabase(user){
   if(perfil){
     $("conductor").value=perfil.full_name||"";
     if(perfil.city) $("ciudad").value=perfil.city;
+    $("whatsappPerfil").value=perfil.phone_whatsapp||"";
   }
 
   const {data:vehiculos,error:errorVehiculo}=await supabaseClient
@@ -1531,8 +1533,9 @@ async function cargarPropietariosAdmin(){
   if(!usuarioActual||!esAdministrador){mensaje.textContent="No autorizado.";lista.innerHTML="";return;}
   mensaje.textContent="Consultando propietarios y vehículos...";lista.innerHTML="";
   const filtro=$("filtroPropietariosAdmin").value;
-  let q=supabaseClient.from("profiles").select("id,full_name,city,verification_status,created_at").eq("role","owner").order("created_at",{ascending:false});
-  if(filtro!=="all") q=q.eq("verification_status",filtro==="pending"?"not_submitted":filtro);
+  let q=supabaseClient.from("profiles").select("id,full_name,city,phone_whatsapp,verification_status,created_at").eq("role","owner").order("created_at",{ascending:false});
+  if(filtro==="pending") q=q.in("verification_status",["not_submitted","pending"]);
+  else if(filtro!=="all") q=q.eq("verification_status",filtro);
   const {data:perfiles,error}=await q;
   if(error){mensaje.textContent="No se pudieron consultar propietarios: "+error.message;return;}
   if(!perfiles?.length){mensaje.textContent="No hay propietarios en esta categoría.";lista.innerHTML='<div class="empty">No se encontraron propietarios.</div>';return;}
@@ -1550,10 +1553,18 @@ async function cargarPropietariosAdmin(){
   const etiquetas={not_submitted:"Pendiente de aprobación",pending:"Pendiente de revisión",verified:"Aprobado",rejected:"Rechazado",suspended:"Suspendido"};
   perfiles.forEach(p=>{
     const vs=porPropietario.get(p.id)||[],card=document.createElement("article");card.className="request";
+    const pendiente=["not_submitted","pending"].includes(p.verification_status);
+    const vehiculoCompleto=vs.some(v=>String(v.plate||"").trim()&&String(v.configuration||"").trim()&&String(v.city||"").trim());
+    const faltantes=[];
+    if(!String(p.full_name||"").trim())faltantes.push("nombre");
+    if(!String(p.city||"").trim())faltantes.push("ciudad del propietario");
+    if(!normalizarWhatsApp(p.phone_whatsapp))faltantes.push("WhatsApp válido");
+    if(!vehiculoCompleto)faltantes.push("al menos un vehículo con placa, configuración y ciudad");
+    const puedeAprobar=faltantes.length===0;
     card.innerHTML='<span class="status '+escaparHTML(p.verification_status)+'">'+escaparHTML(etiquetas[p.verification_status]||p.verification_status)+'</span>'+
-      '<h3>'+escaparHTML(p.full_name||"Propietario")+'</h3><p class="small"><b>Ciudad:</b> '+escaparHTML(p.city||"No indicada")+' · <b>WhatsApp:</b> '+escaparHTML(telefonoPropietario.get(p.id)||"No registrado")+'</p>'+
-      (vs.length?vs.map(v=>'<p class="small"><b>Vehículo:</b> '+escaparHTML(v.plate)+' · <b>Remolque:</b> '+escaparHTML(v.trailer_plate||"No registra")+' · '+escaparHTML(v.configuration)+' · '+escaparHTML(v.body_type||"Carrocería no indicada")+' · '+escaparHTML(v.city)+' · '+escaparHTML(v.availability)+'</p>').join(""):'<p class="small">No registra vehículos.</p>')+
-      ((p.verification_status==="not_submitted"||p.verification_status==="pending")&&vs.length?'<div class="actions"><button class="btn success aprobarPropietarioBtn" type="button">Aprobar propietario</button><button class="btn danger rechazarPropietarioBtn" type="button">Rechazar</button></div>':"")+
+      '<h3>'+escaparHTML(p.full_name||"Propietario")+'</h3><p class="small"><b>Ciudad:</b> '+escaparHTML(p.city||"No indicada")+' · <b>WhatsApp:</b> '+escaparHTML(p.phone_whatsapp||"No registrado")+'</p>'+
+      (vs.length?vs.map(v=>'<p class="small"><b>Vehículo:</b> '+escaparHTML(v.plate||"Sin placa")+' · <b>Remolque:</b> '+escaparHTML(v.trailer_plate||"No registra")+' · '+escaparHTML(v.configuration||"Sin configuración")+' · '+escaparHTML(v.body_type||"Carrocería no indicada")+' · '+escaparHTML(v.city||"Sin ciudad")+' · '+escaparHTML(v.availability)+'</p>').join(""):'<p class="small">No registra vehículos.</p>')+
+      (pendiente?'<p class="small">'+(puedeAprobar?'Datos operativos completos para aprobación.':'<b>Faltan datos para aprobar:</b> '+faltantes.map(escaparHTML).join(" · "))+'</p><div class="actions"><button class="btn success aprobarPropietarioBtn" type="button" '+(puedeAprobar?"":"disabled")+'>Aprobar propietario</button><button class="btn danger rechazarPropietarioBtn" type="button">Rechazar</button></div>':"")+
       '<p class="small resultadoPropietario" aria-live="polite"></p>';
     lista.appendChild(card);
     const aprobar=card.querySelector(".aprobarPropietarioBtn");
@@ -2019,10 +2030,11 @@ $("guardarPerfil").onclick=async()=>{
   const placa=$("placa").value.trim().toUpperCase();
   const config=$("config").value;
   const carroceria=$("carroceria").value;
-  const ciudad=$("ciudad").value;
+  const ciudad=$("ciudad").value.trim();
+  const whatsapp=normalizarWhatsApp($("whatsappPerfil").value);
 
   const placaRemolque=$("placaRemolque").value.trim().toUpperCase();
-  if(!conductor||!placa||!ciudad){mensaje.textContent="Completa el nombre, la placa y la ciudad.";return;}
+  if(!conductor||!placa||!ciudad||!whatsapp){mensaje.textContent="Completa el nombre, la ciudad, un WhatsApp válido, la placa y los datos del vehículo.";return;}
   if(!/^[A-Z0-9]{5,7}$/.test(placa)){mensaje.textContent="Verifica la placa del vehículo: usa entre 5 y 7 letras o números, sin espacios.";return;}
   if(placaRemolque&&!/^[A-Z0-9]{5,7}$/.test(placaRemolque)){mensaje.textContent="Verifica la placa del remolque: usa entre 5 y 7 letras o números, sin espacios.";return;}
 
@@ -2038,7 +2050,7 @@ $("guardarPerfil").onclick=async()=>{
     if(!perfilActual) throw new Error("No encontramos tu perfil de usuario en Supabase.");
 
     const {error:actualizarPerfilError}=await supabaseClient
-      .from("profiles").update({full_name:conductor,city:ciudad}).eq("id",usuarioActual.id);
+      .from("profiles").update({full_name:conductor,city:ciudad,phone_whatsapp:whatsapp}).eq("id",usuarioActual.id);
 
     if(actualizarPerfilError) throw new Error("Error guardando los datos personales: "+actualizarPerfilError.message);
 
