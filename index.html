@@ -1540,15 +1540,11 @@ async function cargarPropietariosAdmin(){
   if(error){mensaje.textContent="No se pudieron consultar propietarios: "+error.message;return;}
   if(!perfiles?.length){mensaje.textContent="No hay propietarios en esta categoría.";lista.innerHTML='<div class="empty">No se encontraron propietarios.</div>';return;}
   const ids=perfiles.map(p=>p.id);
-  const [{data:vehiculos,error:errorVeh},{data:contactosPropietarios,error:errorContactosPropietarios}]=await Promise.all([
-    supabaseClient.from("vehicles").select("owner_id,plate,trailer_plate,configuration,body_type,city,availability").in("owner_id",ids),
-    supabaseClient.from("profiles").select("id,phone_whatsapp").in("id",ids)
-  ]);
+  const {data:vehiculos,error:errorVeh}=await supabaseClient.from("vehicles")
+    .select("owner_id,plate,trailer_plate,configuration,body_type,city,availability").in("owner_id",ids);
   if(errorVeh){mensaje.textContent="No se pudieron consultar los vehículos: "+errorVeh.message;return;}
-  if(errorContactosPropietarios){mensaje.textContent="Propietarios consultados, pero no se pudieron cargar sus teléfonos: "+errorContactosPropietarios.message;return;}
   const porPropietario=new Map();
   (vehiculos||[]).forEach(v=>{if(!porPropietario.has(v.owner_id))porPropietario.set(v.owner_id,[]);porPropietario.get(v.owner_id).push(v);});
-  const telefonoPropietario=new Map((contactosPropietarios||[]).map(p=>[p.id,p.phone_whatsapp]));
   mensaje.textContent="Propietarios encontrados: "+perfiles.length;
   const etiquetas={not_submitted:"Pendiente de aprobación",pending:"Pendiente de revisión",verified:"Aprobado",rejected:"Rechazado",suspended:"Suspendido"};
   perfiles.forEach(p=>{
