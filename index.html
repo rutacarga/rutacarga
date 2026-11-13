@@ -604,7 +604,7 @@ input:focus,select:focus,textarea:focus{border-color:#075BFF;box-shadow:0 0 0 4p
 <div><label>Placa del remolque (si aplica)</label><input id="placaRemolque" placeholder="ABC123" maxlength="6"></div>
 <div><label>Configuración</label><select id="config"><option>2S1</option><option>2S2</option><option>3S2</option><option>3S3</option><option>Otra</option></select></div>
 <div><label>Carrocería</label><select id="carroceria"><option>Estacas</option><option>Furgón</option><option>Planchón</option><option>Portacontenedor</option><option>Volco</option><option>Tanque</option><option>Refrigerada</option></select></div>
-<div><label>Ciudad habitual</label><select id="ciudad"><option>Cúcuta</option><option>Bogotá</option><option>Medellín</option><option>Bucaramanga</option><option>Cali</option><option>Barranquilla</option></select></div>
+<div><label>Ciudad habitual</label><input id="ciudad" maxlength="80" autocomplete="address-level2" placeholder="Ciudad o municipio"></div>
 <div><label>Tipo de cuenta</label><input value="Asignado por RUTA CARGA" disabled></div>
 </div>
 <button class="btn" id="guardarPerfil">Guardar perfil</button>
@@ -1394,17 +1394,22 @@ async function cargarPropietariosAdmin(){
   if(error){mensaje.textContent="No se pudieron consultar propietarios: "+error.message;return;}
   if(!perfiles?.length){mensaje.textContent="No hay propietarios en esta categoría.";lista.innerHTML='<div class="empty">No se encontraron propietarios.</div>';return;}
   const ids=perfiles.map(p=>p.id);
-  const {data:vehiculos,error:errorVeh}=await supabaseClient.from("vehicles").select("owner_id,plate,configuration,body_type,city,availability").in("owner_id",ids);
+  const [{data:vehiculos,error:errorVeh},{data:contactosPropietarios,error:errorContactosPropietarios}]=await Promise.all([
+    supabaseClient.from("vehicles").select("owner_id,plate,trailer_plate,configuration,body_type,city,availability").in("owner_id",ids),
+    supabaseClient.from("profiles").select("id,phone_whatsapp").in("id",ids)
+  ]);
   if(errorVeh){mensaje.textContent="No se pudieron consultar los vehículos: "+errorVeh.message;return;}
+  if(errorContactosPropietarios){mensaje.textContent="Propietarios consultados, pero no se pudieron cargar sus teléfonos: "+errorContactosPropietarios.message;return;}
   const porPropietario=new Map();
   (vehiculos||[]).forEach(v=>{if(!porPropietario.has(v.owner_id))porPropietario.set(v.owner_id,[]);porPropietario.get(v.owner_id).push(v);});
+  const telefonoPropietario=new Map((contactosPropietarios||[]).map(p=>[p.id,p.phone_whatsapp]));
   mensaje.textContent="Propietarios encontrados: "+perfiles.length;
   const etiquetas={not_submitted:"Pendiente de aprobación",pending:"Pendiente de revisión",verified:"Aprobado",rejected:"Rechazado",suspended:"Suspendido"};
   perfiles.forEach(p=>{
     const vs=porPropietario.get(p.id)||[],card=document.createElement("article");card.className="request";
     card.innerHTML='<span class="status '+escaparHTML(p.verification_status)+'">'+escaparHTML(etiquetas[p.verification_status]||p.verification_status)+'</span>'+
-      '<h3>'+escaparHTML(p.full_name||"Propietario")+'</h3><p class="small"><b>Ciudad:</b> '+escaparHTML(p.city||"No indicada")+'</p>'+
-      (vs.length?vs.map(v=>'<p class="small"><b>Vehículo:</b> '+escaparHTML(v.plate)+' · '+escaparHTML(v.configuration)+' · '+escaparHTML(v.body_type)+' · '+escaparHTML(v.city)+' · '+escaparHTML(v.availability)+'</p>').join(""):'<p class="small">No registra vehículos.</p>')+
+      '<h3>'+escaparHTML(p.full_name||"Propietario")+'</h3><p class="small"><b>Ciudad:</b> '+escaparHTML(p.city||"No indicada")+' · <b>WhatsApp:</b> '+escaparHTML(telefonoPropietario.get(p.id)||"No registrado")+'</p>'+
+      (vs.length?vs.map(v=>'<p class="small"><b>Vehículo:</b> '+escaparHTML(v.plate)+' · <b>Remolque:</b> '+escaparHTML(v.trailer_plate||"No registra")+' · '+escaparHTML(v.configuration)+' · '+escaparHTML(v.body_type||"Carrocería no indicada")+' · '+escaparHTML(v.city)+' · '+escaparHTML(v.availability)+'</p>').join(""):'<p class="small">No registra vehículos.</p>')+
       ((p.verification_status==="not_submitted"||p.verification_status==="pending")&&vs.length?'<div class="actions"><button class="btn success aprobarPropietarioBtn" type="button">Aprobar propietario</button><button class="btn danger rechazarPropietarioBtn" type="button">Rechazar</button></div>':"")+
       '<p class="small resultadoPropietario" aria-live="polite"></p>';
     lista.appendChild(card);
@@ -1465,6 +1470,14 @@ async function cargarSolicitudesAdmin(){
     return;
   }
 
+  const idsEmpresa=[...new Set(data.map(x=>x.user_id))];
+  const [{data:contactosEmpresa,error:errorContactosEmpresa},{data:perfilesEmpresa,error:errorPerfilesEmpresa}]=await Promise.all([
+    supabaseClient.from("company_public_contacts").select("company_id,whatsapp,publicly_visible").in("company_id",idsEmpresa),
+    supabaseClient.from("profiles").select("id,full_name,phone_whatsapp,city").in("id",idsEmpresa)
+  ]);
+  if(errorContactosEmpresa||errorPerfilesEmpresa){mensaje.textContent="Solicitudes consultadas, pero no se pudieron cargar los datos de contacto: "+(errorContactosEmpresa?.message||errorPerfilesEmpresa?.message);return;}
+  const contactoEmpresaMap=new Map((contactosEmpresa||[]).map(x=>[x.company_id,x]));
+  const perfilEmpresaMap=new Map((perfilesEmpresa||[]).map(x=>[x.id,x]));
   mensaje.textContent="Solicitudes encontradas: "+data.length;
 
   for(const solicitud of data){
@@ -1482,12 +1495,16 @@ async function cargarSolicitudesAdmin(){
     const fecha=solicitud.submitted_at
       ?new Date(solicitud.submitted_at).toLocaleString("es-CO")
       :"No disponible";
+    const contactoEmpresa=contactoEmpresaMap.get(solicitud.user_id)||{};
+    const perfilEmpresa=perfilEmpresaMap.get(solicitud.user_id)||{};
 
     tarjeta.innerHTML=`
       <span class="status ${escaparHTML(solicitud.status)}">${escaparHTML(estados[solicitud.status]||solicitud.status)}</span>
       <h3>${escaparHTML(solicitud.legal_name)}</h3>
       <p class="small"><b>NIT:</b> ${escaparHTML(solicitud.nit)}</p>
-      <p class="small"><b>Referencia:</b> ${escaparHTML(solicitud.transport_authorization_reference||"No indicada")}</p>
+      <p class="small"><b>Referencia de habilitación:</b> ${escaparHTML(solicitud.transport_authorization_reference||"No indicada")}</p>
+      <p class="small"><b>Contacto:</b> ${escaparHTML(perfilEmpresa.full_name||"No registrado")} · ${escaparHTML(perfilEmpresa.phone_whatsapp||"Sin teléfono")} · ${escaparHTML(perfilEmpresa.city||"Sin ciudad")}</p>
+      <p class="small"><b>WhatsApp comercial:</b> ${escaparHTML(contactoEmpresa.whatsapp||"No registrado")} · <b>Publicación autorizada:</b> ${contactoEmpresa.publicly_visible?"Sí":"No"}</p>
       <p class="small"><b>Fecha de solicitud:</b> ${escaparHTML(fecha)}</p>
       <p class="small"><b>ID de usuario:</b> ${escaparHTML(solicitud.user_id)}</p>
       ${solicitud.review_notes?`<p class="small"><b>Observaciones:</b> ${escaparHTML(solicitud.review_notes)}</p>`:""}
@@ -1862,8 +1879,10 @@ $("guardarPerfil").onclick=async()=>{
   const carroceria=$("carroceria").value;
   const ciudad=$("ciudad").value;
 
+  const placaRemolque=$("placaRemolque").value.trim().toUpperCase();
   if(!conductor||!placa||!ciudad){mensaje.textContent="Completa el nombre, la placa y la ciudad.";return;}
-  if(placa.length<5){mensaje.textContent="Verifica la placa del tractocamión.";return;}
+  if(!/^[A-Z0-9]{5,7}$/.test(placa)){mensaje.textContent="Verifica la placa del vehículo: usa entre 5 y 7 letras o números, sin espacios.";return;}
+  if(placaRemolque&&!/^[A-Z0-9]{5,7}$/.test(placaRemolque)){mensaje.textContent="Verifica la placa del remolque: usa entre 5 y 7 letras o números, sin espacios.";return;}
 
   boton.disabled=true;
   boton.textContent="Guardando...";
@@ -1889,7 +1908,7 @@ $("guardarPerfil").onclick=async()=>{
     if(consultaVehiculoError) throw new Error("Error consultando el vehículo: "+consultaVehiculoError.message);
 
     const datosVehiculo={
-      owner_id:usuarioActual.id,plate:placa,trailer_plate:$("placaRemolque").value.trim().toUpperCase()||null,configuration:config,
+      owner_id:usuarioActual.id,plate:placa,trailer_plate:placaRemolque||null,configuration:config,
       body_type:carroceria,city:ciudad,availability:"available"
     };
 
@@ -1923,6 +1942,8 @@ $("enviarEmpresa").onclick=async()=>{
   if(!usuarioActual){mensaje.textContent="Debes iniciar sesión con Google.";return;}
   if(solicitudEmpresaExistente&&!puedeReenviar){mensaje.textContent="Esta solicitud ya está pendiente, aprobada o suspendida.";return;}
   if(!razonSocial||!nit){mensaje.textContent="Completa la razón social y el NIT.";return;}
+  if(razonSocial.length<3||razonSocial.length>180){mensaje.textContent="La razón social debe tener entre 3 y 180 caracteres.";return;}
+  if(!/^[0-9A-Za-z.-]{5,30}$/.test(nit.replace(/\\s/g,""))){mensaje.textContent="Verifica el NIT: usa entre 5 y 30 letras o números, puntos o guion, sin espacios.";return;}
   boton.disabled=true;boton.textContent=puedeReenviar?"Reenviando solicitud...":"Enviando solicitud...";
   mensaje.textContent="Registrando los datos de tu empresa...";
   try{
