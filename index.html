@@ -1827,7 +1827,10 @@ async function cargarUsuariosAdmin(){
     .select("id,full_name,phone_whatsapp,city,role,verification_status,created_at")
     .order("created_at",{ascending:false});
   if(error){mensaje.textContent="No se pudo consultar el directorio: "+error.message;return;}
-  const ids=(perfiles||[]).map(x=>x.id);
+  // Los conductores se muestran únicamente en "Verificación de conductores".
+  // Evita repetir la misma persona en el directorio general y en su módulo operativo.
+  const perfilesDirectorio=(perfiles||[]).filter(p=>p.role!=="driver"&&p.role!=="owner_driver");
+  const ids=perfilesDirectorio.map(x=>x.id);
   let vehiculos=[];
   if(ids.length){
     const {data,error:errorVehiculos}=await supabaseClient.from("vehicles")
@@ -1838,9 +1841,9 @@ async function cargarUsuariosAdmin(){
   const mapa=new Map(vehiculos.map(v=>[v.owner_id,v]));
   const roles={admin:"Administrador",company:"Empresa de transporte",driver:"Conductor",owner:"Propietario",owner_driver:"Propietario y conductor"};
   const estados={verified:"Verificado",pending:"Pendiente",rejected:"Rechazado",suspended:"Suspendido",not_submitted:"Sin enviar"};
-  mensaje.textContent="Usuarios registrados: "+(perfiles||[]).length;
-  if(!perfiles?.length){lista.innerHTML='<div class="empty">No hay usuarios registrados.</div>';return;}
-  perfiles.forEach(p=>{
+  mensaje.textContent="Usuarios en este directorio: "+perfilesDirectorio.length+" · Los conductores aparecen en su sección de verificación.";
+  if(!perfilesDirectorio.length){lista.innerHTML='<div class="empty">No hay otros usuarios en este directorio.</div>';return;}
+  perfilesDirectorio.forEach(p=>{
     const v=mapa.get(p.id),card=document.createElement("article");card.className="request";
     card.innerHTML='<h3>'+escaparHTML(p.full_name||"Usuario sin nombre")+'</h3>'+
       '<p class="small"><b>Rol:</b> '+escaparHTML(roles[p.role]||p.role)+'</p>'+
