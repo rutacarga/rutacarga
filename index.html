@@ -765,13 +765,11 @@ details summary{color:#075BFF}
 <section id="verificacionConductor" class="view hidden">
 <div class="panel">
 <h2>Verificación de conductor</h2>
-<p class="small">Completa tus datos de identificación y contacto. Esta información será visible únicamente para tu cuenta y los administradores autorizados que revisan la solicitud.</p>
+<p class="small">La verificación se realiza con los datos básicos de tu perfil y tu WhatsApp de contacto. No solicitamos documentos ni archivos.</p>
 <div id="estadoVerificacionConductor" aria-live="polite" class="small">Consultando tu estado de verificación...</div>
 <div id="formularioVerificacionConductor">
-<div class="notice" style="margin-top:14px">Tus datos de identificación se almacenan de forma privada y se utilizan para validar la solicitud.</div>
 <div class="formgrid">
-<div><label for="cedulaConductor">Cédula / documento *</label><input id="cedulaConductor" maxlength="20" autocomplete="off" inputmode="text" placeholder="Número de documento"></div>
-<div><label for="whatsappConductor">Celular / WhatsApp *</label><input id="whatsappConductor" type="tel" maxlength="20" autocomplete="tel" inputmode="tel" placeholder="Ej. 3001234567"></div>
+<div style="grid-column:1/-1"><label for="whatsappConductor">Celular / WhatsApp *</label><input id="whatsappConductor" type="tel" maxlength="20" autocomplete="tel" inputmode="tel" placeholder="Ej. 3001234567"></div>
 </div>
 <button class="btn" id="enviarVerificacionConductor" type="button">Solicitar verificación</button>
 <p class="small" id="mensajeVerificacionConductor" aria-live="polite"></p>
@@ -788,7 +786,7 @@ details summary{color:#075BFF}
 <div class="formgrid">
 <div><label for="razonSocial">Razón social *</label><input id="razonSocial" maxlength="180" placeholder="Nombre legal de la empresa"></div>
 <div><label for="nitEmpresa">NIT *</label><input id="nitEmpresa" maxlength="30" placeholder="NIT de la empresa"></div>
-<div style="grid-column:1/-1"><label for="referenciaAutorizacion">Referencia de autorización o habilitación</label><input id="referenciaAutorizacion" maxlength="180" placeholder="Número o referencia, si aplica"></div>
+
 
 </div>
 <div class="notice" style="margin-top:14px">Enviar la solicitud no significa que la empresa esté aprobada. RUTA CARGA revisará los datos registrados.</div>
@@ -1091,7 +1089,7 @@ async function cargarEmpresaDesdeSupabase(user){
 
   const {data,error}=await supabaseClient
     .from("company_verifications")
-    .select("legal_name,nit,transport_authorization_reference,status,submitted_at,review_notes")
+    .select("legal_name,nit,status,submitted_at,review_notes")
     .eq("user_id",user.id)
     .maybeSingle();
 
@@ -1115,7 +1113,6 @@ async function cargarEmpresaDesdeSupabase(user){
   solicitudEmpresaExistente=data;
   $("razonSocial").value=data.legal_name||"";
   $("nitEmpresa").value=data.nit||"";
-  $("referenciaAutorizacion").value=data.transport_authorization_reference||"";
 
   const estados={
     pending:"Pendiente de revisión",
@@ -1174,11 +1171,10 @@ async function cargarSolicitudConductor(user){
 
   const {data:datosPrivados,error:errorDatosPrivados}=await supabaseClient
     .from("driver_verification_private_data")
-    .select("national_id,phone_whatsapp")
+    .select("phone_whatsapp")
     .eq("user_id",user.id)
     .maybeSingle();
-  if(errorDatosPrivados){mensaje.textContent="No se pudieron consultar tus datos privados: "+errorDatosPrivados.message;return;}
-  $("cedulaConductor").value=datosPrivados?.national_id||"";
+  if(errorDatosPrivados){mensaje.textContent="No se pudo consultar tu WhatsApp: "+errorDatosPrivados.message;return;}
   $("whatsappConductor").value=datosPrivados?.phone_whatsapp||"";
 
   const {data,error}=await supabaseClient
@@ -1262,10 +1258,10 @@ async function cargarSolicitudesConductoresAdmin(){
   const ids=[...new Set(data.map(s=>s.user_id))];
   const [{data:perfiles,error:errorPerfiles},{data:datosPrivados,error:errorDatosPrivados}]=await Promise.all([
     supabaseClient.from("profiles").select("id,full_name,phone_whatsapp,city").in("id",ids),
-    supabaseClient.from("driver_verification_private_data").select("user_id,national_id,phone_whatsapp").in("user_id",ids)
+    supabaseClient.from("driver_verification_private_data").select("user_id,phone_whatsapp").in("user_id",ids)
   ]);
   if(errorPerfiles||errorDatosPrivados){
-    mensaje.textContent="Solicitudes encontradas, pero no se pudieron cargar los datos de identidad: "+(errorPerfiles?.message||errorDatosPrivados?.message);
+    mensaje.textContent="Solicitudes encontradas, pero no se pudieron cargar los datos de contacto: "+(errorPerfiles?.message||errorDatosPrivados?.message);
     return;
   }
   const perfilesPorId=new Map((perfiles||[]).map(p=>[p.id,p]));
@@ -1283,7 +1279,6 @@ async function cargarSolicitudesConductoresAdmin(){
       '<span class="status '+escaparHTML(solicitud.status)+'">'+escaparHTML(estados[solicitud.status]||solicitud.status)+'</span>'+
       '<h3>Solicitud de conductor</h3>'+
       '<p class="small"><b>Nombre:</b> '+escaparHTML(perfil.full_name||"No registrado")+"</p>"+
-      '<p class="small"><b>Cédula:</b> '+escaparHTML(privado.national_id||"No registrada")+"</p>"+
       '<p class="small"><b>Celular / WhatsApp:</b> '+escaparHTML(privado.phone_whatsapp||perfil.phone_whatsapp||"No registrado")+"</p>"+
       '<p class="small"><b>Ciudad:</b> '+escaparHTML(perfil.city||"No indicada")+"</p>"+
       '<p class="small"><b>Fecha de envío:</b> '+escaparHTML(fecha)+'</p>'+
@@ -1343,16 +1338,14 @@ $("enviarVerificacionConductor").addEventListener("click",async()=>{
   if(!usuarioActual){mensaje.textContent="Debes iniciar sesión con Google.";return;}
   if(!["driver","owner","owner_driver"].includes(rolUsuario)){mensaje.textContent="Esta cuenta no tiene un rol habilitado para verificación de conductor.";return;}
   boton.disabled=true;boton.textContent="Enviando solicitud...";mensaje.textContent="Registrando tu solicitud...";
-  const documento=$("cedulaConductor").value.trim();
   const telefono=normalizarWhatsApp($("whatsappConductor").value);
-  if(!/^[0-9A-Za-z.-]{5,20}$/.test(documento)){mensaje.textContent="Escribe un número de documento válido (5 a 20 caracteres).";boton.disabled=false;return;}
   if(!telefono){mensaje.textContent="Escribe un WhatsApp válido de 10 a 15 dígitos.";boton.disabled=false;return;}
   try{
     const {error:errorDatos}=await supabaseClient.from("driver_verification_private_data").upsert({
-      user_id:usuarioActual.id,national_id:documento,phone_whatsapp:telefono,updated_at:new Date().toISOString()
+      user_id:usuarioActual.id,phone_whatsapp:telefono,updated_at:new Date().toISOString()
     },{onConflict:"user_id"});
     if(errorDatos)throw new Error("No se pudieron guardar tus datos privados: "+errorDatos.message);
-    const {error}=await supabaseClient.rpc("submit_driver_verification",{p_document_storage_path:null});
+    const {error}=await supabaseClient.rpc("submit_driver_verification",{});
     if(error)throw new Error("No se pudo registrar la solicitud: "+error.message);
     mensaje.textContent="¡Solicitud enviada! RUTA CARGA revisará los datos de tu perfil.";
     await cargarSolicitudConductor(usuarioActual);
@@ -1603,7 +1596,7 @@ async function cargarSolicitudesAdmin(){
 
   let consulta=supabaseClient
     .from("company_verifications")
-    .select("user_id,legal_name,nit,transport_authorization_reference,status,submitted_at,review_notes,reviewed_at,reviewed_by")
+    .select("user_id,legal_name,nit,status,submitted_at,review_notes,reviewed_at,reviewed_by")
     .order("submitted_at",{ascending:false});
 
   if(filtro!=="all") consulta=consulta.eq("status",filtro);
@@ -1652,15 +1645,11 @@ async function cargarSolicitudesAdmin(){
       <span class="status ${escaparHTML(solicitud.status)}">${escaparHTML(estados[solicitud.status]||solicitud.status)}</span>
       <h3>${escaparHTML(solicitud.legal_name)}</h3>
       <p class="small"><b>NIT:</b> ${escaparHTML(solicitud.nit)}</p>
-      <p class="small"><b>Referencia de habilitación:</b> ${escaparHTML(solicitud.transport_authorization_reference||"No indicada")}</p>
       <p class="small"><b>Contacto:</b> ${escaparHTML(perfilEmpresa.full_name||"No registrado")} · ${escaparHTML(perfilEmpresa.phone_whatsapp||"Sin teléfono")} · ${escaparHTML(perfilEmpresa.city||"Sin ciudad")}</p>
       <p class="small"><b>WhatsApp comercial:</b> ${escaparHTML(contactoEmpresa.whatsapp||"No registrado")} · <b>Publicación autorizada:</b> ${contactoEmpresa.publicly_visible?"Sí":"No"}</p>
       <p class="small"><b>Fecha de solicitud:</b> ${escaparHTML(fecha)}</p>
       <p class="small"><b>ID de usuario:</b> ${escaparHTML(solicitud.user_id)}</p>
       ${solicitud.review_notes?`<p class="small"><b>Observaciones:</b> ${escaparHTML(solicitud.review_notes)}</p>`:""}
-      <div class="actions">
-        <button class="btn secondary documentoBtn" type="button">Abrir documento privado</button>
-      </div>
       ${solicitud.status==="pending"?`
         <div class="actions">
           <button class="btn success aprobarBtn" type="button">Aprobar empresa</button>
@@ -2090,7 +2079,6 @@ $("guardarPerfil").onclick=async()=>{
 $("enviarEmpresa").onclick=async()=>{
   const boton=$("enviarEmpresa"),mensaje=$("mensajeEmpresa");
   const razonSocial=$("razonSocial").value.trim(),nit=$("nitEmpresa").value.trim();
-  const referencia=$("referenciaAutorizacion").value.trim();
   const puedeReenviar=!!solicitudEmpresaExistente&&["rejected","not_submitted"].includes(solicitudEmpresaExistente.status);
   if(!usuarioActual){mensaje.textContent="Debes iniciar sesión con Google.";return;}
   if(solicitudEmpresaExistente&&!puedeReenviar){mensaje.textContent="Esta solicitud ya está pendiente, aprobada o suspendida.";return;}
@@ -2100,7 +2088,7 @@ $("enviarEmpresa").onclick=async()=>{
   boton.disabled=true;boton.textContent=puedeReenviar?"Reenviando solicitud...":"Enviando solicitud...";
   mensaje.textContent="Registrando los datos de tu empresa...";
   try{
-    const {error}=await supabaseClient.rpc("submit_company_verification",{p_legal_name:razonSocial,p_nit:nit,p_transport_authorization_reference:referencia||null,p_document_storage_path:null});
+    const {error}=await supabaseClient.rpc("submit_company_verification",{p_legal_name:razonSocial,p_nit:nit});
     if(error)throw new Error("No se pudo registrar la solicitud: "+error.message);
     mensaje.textContent=puedeReenviar?"¡Solicitud corregida y reenviada! Tu empresa quedó nuevamente pendiente de revisión.":"¡Solicitud enviada! Tu empresa quedó registrada para revisión. Todavía no está verificada.";
     solicitudEmpresaExistente={status:"pending"};await cargarEmpresaDesdeSupabase(usuarioActual);
