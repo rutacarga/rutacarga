@@ -2421,9 +2421,11 @@ $("guardarPerfil").onclick=async()=>{
       phone_whatsapp:whatsapp,
       national_id:esPersonaNatural?cedula:null
     };
-    const {error:actualizarPerfilError}=await supabaseClient
-      .from("profiles").update(datosPerfil).eq("id",usuarioActual.id);
+    const {data:perfilActualizado,error:actualizarPerfilError}=await supabaseClient
+      .from("profiles").update(datosPerfil).eq("id",usuarioActual.id)
+      .select("id,full_name,phone_whatsapp,city,national_id").maybeSingle();
     if(actualizarPerfilError)throw new Error("Error guardando tus datos: "+actualizarPerfilError.message);
+    if(!perfilActualizado)throw new Error("No se confirmó la actualización del perfil. Verifica que tengas permiso para modificar estos datos.");
 
     if(rolUsuario==="company"){
       const {data:contacto,error:errorContacto}=await supabaseClient.from("company_public_contacts")
@@ -2468,6 +2470,7 @@ $("guardarPerfil").onclick=async()=>{
       :"¡Perfecto! Tu información quedó guardada en tu cuenta.";
     await cargarPerfilDesdeSupabase(usuarioActual);
     if(rolUsuario==="company")await cargarContactoEmpresa(usuarioActual);
+    if(rolUsuario==="admin")await cargarUsuariosAdmin();
   }catch(error){
     mensaje.textContent=error.message||"Ocurrió un error al guardar.";
   }finally{
