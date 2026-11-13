@@ -542,6 +542,7 @@ input:focus,select:focus,textarea:focus{border-color:#075BFF;box-shadow:0 0 0 4p
 <button class="tab" data-tab="retorno">Carga de regreso</button>
 <button class="tab" data-tab="rentabilidad">Rentabilidad</button>
 <button class="tab" id="tabPerfil" data-tab="perfil">Mi vehículo</button>
+<button class="tab hidden" id="tabMisAsociaciones" data-tab="misAsociaciones">Mis asociaciones</button>
 <button class="tab hidden" id="tabVerificacionConductor" data-tab="verificacionConductor">Verificar conductor</button>
 <button class="tab hidden" id="tabMisSolicitudes" data-tab="misSolicitudes">Mis solicitudes</button>
 <button class="tab" id="tabEmpresa" data-tab="empresa">Empresa transportadora</button>
@@ -553,6 +554,35 @@ input:focus,select:focus,textarea:focus{border-color:#075BFF;box-shadow:0 0 0 4p
 <button class="tab" id="tabAsistente" data-tab="asistente">Asistente 24/7</button>
 <button class="tab hidden" id="tabAlertas" data-tab="alertas">Alertas inteligentes <span id="contadorAlertas">0</span></button>
 </div>
+
+<section id="misAsociaciones" class="view hidden">
+<div class="panel">
+<h2>Mis asociaciones</h2>
+<p class="small">Conecta vehículos y conductores con autorización de ambas partes. Un vehículo puede tener varios conductores para relevos. Puedes finalizar una asociación cuando cambie el conductor o el vehículo; el historial se conserva.</p>
+<div id="formAsociarConductor" class="panel hidden" style="margin:12px 0;padding:16px">
+<h3>Asociar un conductor a mi vehículo</h3>
+<div class="formgrid">
+<div><label for="vehiculoAsociacion">Vehículo de mi propiedad o empresa</label><select id="vehiculoAsociacion"><option value="">Selecciona un vehículo</option></select></div>
+<div><label for="whatsappConductorAsociacion">WhatsApp del conductor</label><input id="whatsappConductorAsociacion" type="tel" placeholder="Número completo del conductor"></div>
+</div>
+<button class="btn" id="buscarConductorAsociacion" type="button">Buscar conductor</button>
+<p class="small" id="resultadoBusquedaConductor" aria-live="polite"></p>
+<div id="opcionesConductoresAsociacion" class="cards"></div>
+</div>
+<div id="formSolicitarVehiculo" class="panel hidden" style="margin:12px 0;padding:16px">
+<h3>Solicitar asociación a un vehículo</h3>
+<div class="formgrid">
+<div><label for="placaAsociacion">Placa del vehículo</label><input id="placaAsociacion" maxlength="10" placeholder="ABC123"></div>
+</div>
+<button class="btn" id="buscarVehiculoAsociacion" type="button">Buscar vehículo</button>
+<p class="small" id="resultadoBusquedaVehiculo" aria-live="polite"></p>
+<div id="opcionesVehiculosAsociacion" class="cards"></div>
+</div>
+<div class="actions"><button class="btn secondary" id="actualizarAsociaciones" type="button">Actualizar asociaciones</button></div>
+<p class="small" id="estadoAsociaciones" aria-live="polite">Consultando asociaciones...</p>
+<div id="listaAsociaciones"></div>
+</div>
+</section>
 
 <section id="alertas" class="view hidden">
 <div class="panel">
@@ -1483,6 +1513,7 @@ function configurarPanelPorRol(){
     retorno:esAdministrador||esConductor||esPropietario,
     rentabilidad:esAdministrador,
     perfil:esAdministrador||esConductor||esPropietario||esEmpresa,
+    misAsociaciones:!esAdministrador&&(esConductor||esPropietario||esEmpresa),
     verificacionConductor:esAdministrador||esConductor,
     misSolicitudes:esConductor,
     empresa:esAdministrador||esEmpresa,
@@ -1503,6 +1534,7 @@ function configurarPanelPorRol(){
   $("tabPerfil").textContent=esEmpresa?"Mi perfil y flota":esAdministrador?"Mi perfil":"Mi perfil y vehículo";
   $("vehicleManagementFields").classList.toggle("hidden",esAdministrador);
   $("cedulaPerfilContainer").classList.toggle("hidden",esEmpresa);
+  configurarPanelAsociaciones();
   const activa=document.querySelector(".tab.active");
   if(!activa||activa.classList.contains("hidden")){
     const preferida=esAdministrador?"administracion":esEmpresa?"empresa":"buscar";
@@ -1635,6 +1667,7 @@ async function mostrarSesion(){
     }
 
     configurarPanelPorRol();
+    await cargarMisAsociaciones();
     await cargarNotificaciones();
     if(esAdministrador){
       await cargarResumenAdmin();
@@ -2821,6 +2854,120 @@ $("guardarCargaReal").onclick=async()=>{
   }catch(e){mensaje.textContent="No se pudo publicar: "+(e.message||"Error desconocido");}
   finally{boton.disabled=false;boton.textContent="Publicar carga";}
 };
+
+
+function configurarPanelAsociaciones(){
+  const puedeGestionar=["owner","owner_driver","company"].includes(rolUsuario);
+  const puedeSolicitar=["driver","owner_driver"].includes(rolUsuario);
+  $("formAsociarConductor").classList.toggle("hidden",!puedeGestionar);
+  $("formSolicitarVehiculo").classList.toggle("hidden",!puedeSolicitar);
+  const select=$("vehiculoAsociacion");
+  if(select){
+    const actual=select.value;
+    select.innerHTML='<option value="">Selecciona un vehículo</option>';
+    (vehiculosCuenta||[]).forEach(v=>{
+      const o=document.createElement("option");o.value=v.id;o.textContent=v.plate+(v.city?" · "+v.city:"");select.appendChild(o);
+    });
+    if((vehiculosCuenta||[]).some(v=>v.id===actual))select.value=actual;
+  }
+}
+
+async function buscarConductoresParaAsociar(){
+  const estado=$("resultadoBusquedaConductor"),lista=$("opcionesConductoresAsociacion");
+  estado.textContent="Buscando cuenta de conductor...";
+  lista.replaceChildren();
+  const vehicleId=$("vehiculoAsociacion").value;
+  if(!vehicleId){estado.textContent="Primero selecciona uno de tus vehículos.";return;}
+  const whatsapp=$("whatsappConductorAsociacion").value.trim();
+  const {data,error}=await supabaseClient.rpc("find_driver_for_association",{p_whatsapp:whatsapp});
+  if(error){estado.textContent="No se pudo buscar: "+error.message;return;}
+  const resultados=data||[];
+  if(!resultados.length){estado.textContent="No encontramos una cuenta de conductor con ese WhatsApp. Verifica el número o pide al conductor que actualice su perfil.";return;}
+  estado.textContent=resultados.length===1?"Conductor encontrado. Envía la solicitud para que la acepte.":"Encontramos varias cuentas. Confirma el nombre antes de enviar la solicitud.";
+  resultados.forEach(d=>{
+    const card=document.createElement("article");card.className="request";
+    const h=document.createElement("h3");h.textContent=d.full_name||"Conductor RUTA CARGA";
+    const p=document.createElement("p");p.className="small";p.textContent=d.city||"Ciudad no registrada";
+    const b=document.createElement("button");b.type="button";b.className="btn";b.textContent="Enviar solicitud";
+    b.addEventListener("click",async()=>{
+      b.disabled=true;
+      const {error:err}=await supabaseClient.rpc("request_vehicle_driver_association",{p_vehicle_id:vehicleId,p_driver_id:d.driver_id});
+      if(err){estado.textContent="No se pudo enviar la solicitud: "+err.message;b.disabled=false;return;}
+      estado.textContent="Solicitud enviada. El conductor debe aceptarla desde Mis asociaciones.";
+      lista.replaceChildren();await cargarMisAsociaciones();
+    });
+    card.append(h,p,b);lista.appendChild(card);
+  });
+}
+
+async function buscarVehiculosParaAsociar(){
+  const estado=$("resultadoBusquedaVehiculo"),lista=$("opcionesVehiculosAsociacion");
+  estado.textContent="Buscando vehículo...";
+  lista.replaceChildren();
+  const placa=$("placaAsociacion").value.trim();
+  const {data,error}=await supabaseClient.rpc("find_vehicle_for_association",{p_plate:placa});
+  if(error){estado.textContent="No se pudo buscar: "+error.message;return;}
+  const resultados=data||[];
+  if(!resultados.length){estado.textContent="No encontramos un vehículo con esa placa. Verifica que el propietario lo haya registrado.";return;}
+  estado.textContent=resultados.length===1?"Vehículo encontrado. Envía la solicitud al propietario.":"Hay varios resultados; confirma la placa antes de solicitar.";
+  resultados.forEach(v=>{
+    const card=document.createElement("article");card.className="request";
+    const h=document.createElement("h3");h.textContent=v.plate;
+    const p=document.createElement("p");p.className="small";p.textContent=(v.owner_name||"Propietario RUTA CARGA")+(v.city?" · "+v.city:"");
+    const b=document.createElement("button");b.type="button";b.className="btn";b.textContent="Solicitar asociación";
+    b.addEventListener("click",async()=>{
+      b.disabled=true;
+      const {error:err}=await supabaseClient.rpc("request_vehicle_driver_association",{p_vehicle_id:v.vehicle_id,p_driver_id:usuarioActual.id});
+      if(err){estado.textContent="No se pudo enviar la solicitud: "+err.message;b.disabled=false;return;}
+      estado.textContent="Solicitud enviada. El propietario debe aceptarla desde Mis asociaciones.";
+      lista.replaceChildren();await cargarMisAsociaciones();
+    });
+    card.append(h,p,b);lista.appendChild(card);
+  });
+}
+
+async function cargarMisAsociaciones(){
+  const estado=$("estadoAsociaciones"),lista=$("listaAsociaciones");
+  if(!usuarioActual||!lista)return;
+  estado.textContent="Consultando tus asociaciones...";
+  lista.replaceChildren();
+  const {data,error}=await supabaseClient.rpc("list_my_vehicle_driver_associations");
+  if(error){estado.textContent="No se pudieron consultar las asociaciones: "+error.message;return;}
+  const filas=data||[];
+  if(!filas.length){estado.textContent="Todavía no tienes asociaciones. Puedes iniciar una desde esta sección.";return;}
+  const etiquetas={pending:"Pendiente de aceptación",active:"Activa",rejected:"Rechazada",ended:"Finalizada"};
+  estado.textContent="Asociaciones encontradas: "+filas.length;
+  filas.forEach(a=>{
+    const card=document.createElement("article");card.className="request";card.style.marginBottom="10px";
+    const h=document.createElement("h3");h.textContent=(a.plate||"Vehículo")+" · "+(a.driver_name||"Conductor");
+    const p=document.createElement("p");p.className="small";
+    p.textContent="Propietario: "+(a.owner_name||"—")+" · Conductor: "+(a.driver_name||"—");
+    const status=document.createElement("span");status.className="status "+(a.status==="active"?"verified":a.status==="rejected"?"rejected":"");status.textContent=etiquetas[a.status]||a.status;
+    const meta=document.createElement("p");meta.className="small";meta.textContent="Creada: "+new Date(a.created_at).toLocaleString("es-CO")+(a.ended_at?" · Finalizada: "+new Date(a.ended_at).toLocaleString("es-CO"):"");
+    card.append(h,status,p,meta);
+    const actions=document.createElement("div");actions.className="actions";
+    if(a.status==="pending"&&!a.is_requester){
+      const accept=document.createElement("button");accept.type="button";accept.className="btn success";accept.textContent="Aceptar";
+      accept.addEventListener("click",async()=>{accept.disabled=true;const {error:err}=await supabaseClient.rpc("respond_vehicle_driver_association",{p_association_id:a.association_id,p_accept:true});if(err){estado.textContent="No se pudo aceptar: "+err.message;accept.disabled=false;return;}await cargarMisAsociaciones();});
+      const reject=document.createElement("button");reject.type="button";reject.className="btn danger";reject.textContent="Rechazar";
+      reject.addEventListener("click",async()=>{reject.disabled=true;const {error:err}=await supabaseClient.rpc("respond_vehicle_driver_association",{p_association_id:a.association_id,p_accept:false});if(err){estado.textContent="No se pudo rechazar: "+err.message;reject.disabled=false;return;}await cargarMisAsociaciones();});
+      actions.append(accept,reject);
+    }else if(a.status==="pending"&&a.is_requester){
+      const wait=document.createElement("span");wait.className="small";wait.textContent="Esperando respuesta de la otra parte.";actions.appendChild(wait);
+    }
+    if(a.status==="active"||a.status==="pending"){
+      const end=document.createElement("button");end.type="button";end.className="btn secondary";end.textContent="Finalizar asociación";
+      end.addEventListener("click",async()=>{if(!confirm("¿Deseas finalizar esta asociación? El historial se conservará."))return;end.disabled=true;const {error:err}=await supabaseClient.rpc("end_vehicle_driver_association",{p_association_id:a.association_id});if(err){estado.textContent="No se pudo finalizar: "+err.message;end.disabled=false;return;}await cargarMisAsociaciones();});
+      actions.appendChild(end);
+    }
+    if(actions.childNodes.length)card.appendChild(actions);
+    lista.appendChild(card);
+  });
+}
+$("buscarConductorAsociacion").addEventListener("click",buscarConductoresParaAsociar);
+$("buscarVehiculoAsociacion").addEventListener("click",buscarVehiculosParaAsociar);
+$("actualizarAsociaciones").addEventListener("click",cargarMisAsociaciones);
+
 
 pintar();
 </script>
