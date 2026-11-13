@@ -1047,6 +1047,7 @@ async function cargarPerfilDesdeSupabase(user){
   }
 
   vehiculosCuenta=vehiculos||[];
+  if(!perfil?.city&&vehiculosCuenta[0]?.city)$("ciudad").value=vehiculosCuenta[0].city;
   pintarSelectorVehiculos();
   const botonCoincidencias=$("coincidenciasVehiculo");
   if(botonCoincidencias){
@@ -1995,7 +1996,7 @@ async function cargarUsuariosAdmin(){
       '<p class="small"><b>Rol:</b> '+escaparHTML(roles[p.role]||p.role)+'</p>'+
       '<p class="small"><b>Verificación:</b> '+escaparHTML(estados[p.verification_status]||p.verification_status)+'</p>'+
       identificacion+
-      '<p class="small"><b>Ciudad:</b> '+escaparHTML(p.city||"No indicada")+' · <b>WhatsApp:</b> '+escaparHTML(whatsapp)+'</p>'+
+      '<p class="small"><b>Ciudad:</b> '+escaparHTML(p.city||v?.city||"No indicada")+' · <b>WhatsApp:</b> '+escaparHTML(whatsapp)+'</p>'+
       (v?'<p class="small"><b>Vehículo:</b> '+escaparHTML(v.plate)+' · '+escaparHTML(v.configuration)+' · '+escaparHTML(v.body_type)+' · '+escaparHTML(v.city||"")+'</p>':'<p class="small">Sin vehículo registrado.</p>')+
       '<p class="small">Registro: '+escaparHTML(new Date(p.created_at).toLocaleString("es-CO"))+'</p>';
     lista.appendChild(card);
