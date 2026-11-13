@@ -1662,7 +1662,9 @@ supabaseClient.auth.onAuthStateChange(()=>{
 mostrarSesion();
 
 /* ADMINISTRACIÓN */
+let propietariosAdminRenderId=0;
 async function cargarPropietariosAdmin(){
+  const renderId=++propietariosAdminRenderId;
   const mensaje=$("mensajePropietariosAdmin"),lista=$("listaPropietariosAdmin");
   if(!usuarioActual||!esAdministrador){mensaje.textContent="No autorizado.";lista.innerHTML="";return;}
   mensaje.textContent="Consultando propietarios y vehículos...";lista.innerHTML="";
@@ -1670,16 +1672,19 @@ async function cargarPropietariosAdmin(){
   let q=supabaseClient.from("profiles").select("id,full_name,city,verification_status,created_at").eq("role","owner").order("created_at",{ascending:false});
   if(filtro!=="all") q=q.eq("verification_status",filtro==="pending"?"not_submitted":filtro);
   const {data:perfiles,error}=await q;
+  if(renderId!==propietariosAdminRenderId)return;
   if(error){mensaje.textContent="No se pudieron consultar propietarios: "+error.message;return;}
-  if(!perfiles?.length){mensaje.textContent="No hay propietarios en esta categoría.";lista.innerHTML='<div class="empty">No se encontraron propietarios.</div>';return;}
-  const ids=perfiles.map(p=>p.id);
+  const perfilesUnicos=[...new Map((perfiles||[]).map(p=>[p.id,p])).values()];
+  if(!perfilesUnicos.length){mensaje.textContent="No hay propietarios en esta categoría.";lista.innerHTML='<div class="empty">No se encontraron propietarios.</div>';return;}
+  const ids=perfilesUnicos.map(p=>p.id);
   const {data:vehiculos,error:errorVeh}=await supabaseClient.from("vehicles").select("owner_id,plate,configuration,body_type,city,availability").in("owner_id",ids);
+  if(renderId!==propietariosAdminRenderId)return;
   if(errorVeh){mensaje.textContent="No se pudieron consultar los vehículos: "+errorVeh.message;return;}
   const porPropietario=new Map();
   (vehiculos||[]).forEach(v=>{if(!porPropietario.has(v.owner_id))porPropietario.set(v.owner_id,[]);porPropietario.get(v.owner_id).push(v);});
-  mensaje.textContent="Propietarios encontrados: "+perfiles.length;
+  mensaje.textContent="Propietarios encontrados: "+perfilesUnicos.length;
   const etiquetas={not_submitted:"Pendiente de aprobación",pending:"Pendiente de revisión",verified:"Aprobado",rejected:"Rechazado",suspended:"Suspendido"};
-  perfiles.forEach(p=>{
+  perfilesUnicos.forEach(p=>{
     const vs=porPropietario.get(p.id)||[],card=document.createElement("article");card.className="request";
     card.innerHTML='<span class="status '+escaparHTML(p.verification_status)+'">'+escaparHTML(etiquetas[p.verification_status]||p.verification_status)+'</span>'+
       '<h3>'+escaparHTML(p.full_name||"Propietario")+'</h3><p class="small"><b>Ciudad:</b> '+escaparHTML(p.city||"No indicada")+'</p>'+
