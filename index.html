@@ -1816,42 +1816,58 @@ async function cargarCargasAdmin(){
   });
 }
 
+let cargarUsuariosAdminSolicitud=0;
 async function cargarUsuariosAdmin(){
+  const solicitud=++cargarUsuariosAdminSolicitud;
   const mensaje=$("mensajeUsuariosAdmin"),lista=$("listaUsuariosAdmin");
-  if(!usuarioActual||!esAdministrador){mensaje.textContent="No autorizado.";lista.innerHTML="";return;}
-  mensaje.textContent="Consultando directorio de usuarios...";lista.innerHTML="";
+  if(!usuarioActual||!esAdministrador){mensaje.textContent="No autorizado.";lista.replaceChildren();return;}
+  mensaje.textContent="Consultando directorio de usuarios...";lista.replaceChildren();
   const {data:perfiles,error}=await supabaseClient.from("profiles")
     .select("id,full_name,phone_whatsapp,city,role,verification_status,created_at")
     .order("created_at",{ascending:false});
+  if(solicitud!==cargarUsuariosAdminSolicitud)return;
   if(error){mensaje.textContent="No se pudo consultar el directorio: "+error.message;return;}
+  // Una sola tarjeta por cuenta, incluso si se disparan varias recargas simultáneas.
+  const perfilesUnicos=[...new Map((perfiles||[]).map(p=>[p.id,p])).values()];
   // Los conductores se muestran únicamente en "Verificación de conductores".
-  // Evita repetir la misma persona en el directorio general y en su módulo operativo.
-  const perfilesDirectorio=(perfiles||[]).filter(p=>p.role!=="driver"&&p.role!=="owner_driver");
+  const perfilesDirectorio=perfilesUnicos.filter(p=>p.role!=="driver"&&p.role!=="owner_driver");
   const ids=perfilesDirectorio.map(x=>x.id);
   let vehiculos=[];
   if(ids.length){
     const {data,error:errorVehiculos}=await supabaseClient.from("vehicles")
-      .select("owner_id,plate,configuration,body_type,city,availability").in("owner_id",ids);
+      .select("owner_id,plate,configuration,body_type,city,availability,created_at").in("owner_id",ids)
+      .order("created_at",{ascending:false});
+    if(solicitud!==cargarUsuariosAdminSolicitud)return;
     if(errorVehiculos){mensaje.textContent="Usuarios consultados; no se pudieron consultar los vehículos: "+errorVehiculos.message;return;}
     vehiculos=data||[];
   }
-  const mapa=new Map(vehiculos.map(v=>[v.owner_id,v]));
+  const vehiculosPorPropietario=new Map();
+  vehiculos.forEach(v=>{
+    if(!vehiculosPorPropietario.has(v.owner_id))vehiculosPorPropietario.set(v.owner_id,[]);
+    vehiculosPorPropietario.get(v.owner_id).push(v);
+  });
   const roles={admin:"Administrador",company:"Empresa de transporte",driver:"Conductor",owner:"Propietario",owner_driver:"Propietario y conductor"};
   const estados={verified:"Verificado",pending:"Pendiente",rejected:"Rechazado",suspended:"Suspendido",not_submitted:"Sin enviar"};
   mensaje.textContent="Usuarios en este directorio: "+perfilesDirectorio.length+" · Los conductores aparecen en su sección de verificación.";
   if(!perfilesDirectorio.length){lista.innerHTML='<div class="empty">No hay otros usuarios en este directorio.</div>';return;}
-  perfilesDirectorio.forEach(p=>{
-    const v=mapa.get(p.id),card=document.createElement("article");card.className="request";
+  const tarjetas=perfilesDirectorio.map(p=>{
+    const vs=vehiculosPorPropietario.get(p.id)||[],card=document.createElement("article");card.className="request";
+    const detalleVehiculos=p.role==="admin"
+      ?'<p class="small">Cuenta administrativa · no requiere vehículo.</p>'
+      :vs.length
+        ?vs.map(v=>'<p class="small"><b>Vehículo:</b> '+escaparHTML(v.plate)+' · '+escaparHTML(v.configuration)+' · '+escaparHTML(v.body_type||"Carrocería no indicada")+' · '+escaparHTML(v.city||"Ciudad no indicada")+'</p>').join("")
+        :'<p class="small">Sin vehículo registrado.</p>';
     card.innerHTML='<h3>'+escaparHTML(p.full_name||"Usuario sin nombre")+'</h3>'+
       '<p class="small"><b>Rol:</b> '+escaparHTML(roles[p.role]||p.role)+'</p>'+
       '<p class="small"><b>Verificación:</b> '+escaparHTML(estados[p.verification_status]||p.verification_status)+'</p>'+
       '<p class="small"><b>Ciudad:</b> '+escaparHTML(p.city||"No indicada")+' · <b>WhatsApp:</b> '+escaparHTML(p.phone_whatsapp||"No registrado")+'</p>'+
-      (v?'<p class="small"><b>Vehículo:</b> '+escaparHTML(v.plate)+' · '+escaparHTML(v.configuration)+' · '+escaparHTML(v.body_type)+' · '+escaparHTML(v.city||"")+'</p>':'<p class="small">Sin vehículo registrado.</p>')+
+      detalleVehiculos+
       '<p class="small">Registro: '+escaparHTML(new Date(p.created_at).toLocaleString("es-CO"))+'</p>';
-    lista.appendChild(card);
+    return card;
   });
+  if(solicitud!==cargarUsuariosAdminSolicitud)return;
+  lista.replaceChildren(...tarjetas);
 }
-
 async function cargarSolicitudesInteresAdmin(){
   const mensaje=$("mensajeInteresesAdmin"),lista=$("listaInteresesAdmin");
   if(!usuarioActual||!esAdministrador){mensaje.textContent="No autorizado.";lista.innerHTML="";return;}
