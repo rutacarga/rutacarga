@@ -889,6 +889,7 @@ details summary{color:#075BFF}
 
 <!-- PANEL DE ADMINISTRACIÓN -->
 <section id="administracion" class="view hidden">
+<div class="notice" role="status"><b>Validación automática activa:</b> RUTA CARGA aprobará empresas, conductores y propietarios cuando los campos obligatorios estén completos y tengan formato válido. Los propietarios requieren al menos un vehículo con placa, configuración y ciudad. Los casos incompletos permanecen pendientes. Esta validación no certifica identidad, existencia legal ni propiedad del vehículo.</div>
 <div class="panel">
 <h2>Directorio general de usuarios</h2>
 <p class="small">Vista global de perfiles, roles, estados de verificación y vehículos registrados.</p>
@@ -2098,7 +2099,7 @@ $("enviarEmpresa").onclick=async()=>{
   try{
     const {error}=await supabaseClient.rpc("submit_company_verification",{p_legal_name:razonSocial,p_nit:nit});
     if(error)throw new Error("No se pudo registrar la solicitud: "+error.message);
-    mensaje.textContent=puedeReenviar?"¡Solicitud corregida y reenviada! Tu empresa quedó nuevamente pendiente de revisión.":"¡Solicitud enviada! Tu empresa quedó registrada para revisión. Todavía no está verificada.";
+    mensaje.textContent="Solicitud enviada. RUTA CARGA validará automáticamente los datos obligatorios y actualizará el estado de tu empresa.";
     solicitudEmpresaExistente={status:"pending"};await cargarEmpresaDesdeSupabase(usuarioActual);
   }catch(error){mensaje.textContent=error.message||"Ocurrió un error al enviar la solicitud.";}
   finally{boton.disabled=false;boton.textContent="Enviar solicitud de verificación";}
